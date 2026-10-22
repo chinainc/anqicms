@@ -275,6 +275,8 @@ func ModuleDelete(ctx iris.Context) {
 	currentSite.AddAdminLog(ctx, ctx.Tr("DeleteDocumentModelLog", module.Id, module.Title))
 
 	currentSite.DeleteCacheModules()
+	// 模型下的栏目也被一并删除了，栏目缓存必须同步失效
+	currentSite.DeleteCacheCategories()
 
 	ctx.JSON(iris.Map{
 		"code": config.StatusOK,

@@ -1517,6 +1517,13 @@ func ApiArchiveDelete(ctx iris.Context) {
 		err = currentSite.DeleteArchive(archive)
 	} else if draft, getErr := currentSite.GetArchiveDraftById(req.Id); getErr == nil {
 		err = currentSite.DeleteArchiveDraft(draft)
+	} else {
+		// 正式表与草稿表都没有这一条：不能回「删除成功」，否则调用方以为删掉了
+		ctx.JSON(iris.Map{
+			"code": config.StatusFailed,
+			"msg":  currentSite.Tr("DocumentDoesNotExist"),
+		})
+		return
 	}
 	if err != nil {
 		ctx.JSON(iris.Map{

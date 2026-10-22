@@ -494,9 +494,7 @@ func (w *Website) GetArchiveExtra(moduleId uint, id int64, loadCache bool) map[s
 						err := json.Unmarshal([]byte(value), &images)
 						if err == nil {
 							for i := range images {
-								if !strings.HasPrefix(images[i], "http") && !strings.HasPrefix(images[i], "//") {
-									images[i] = w.PluginStorage.StorageUrl + "/" + strings.TrimPrefix(images[i], "/")
-								}
+								images[i] = config.JoinStorageUrl(w.PluginStorage.StorageUrl, images[i])
 							}
 							result[v.FieldName] = images
 						}
@@ -997,7 +995,8 @@ func (w *Website) SaveArchive(req *request.Archive) (*model.Archive, error) {
 	}
 
 	for i, v := range draft.Images {
-		draft.Images[i] = strings.TrimPrefix(v, w.PluginStorage.StorageUrl)
+		// 入库存相对路径；StripStorageUrl 兼容协议差异，也不会把外链截断
+		draft.Images[i] = config.StripStorageUrl(v, w.PluginStorage.StorageUrl)
 	}
 	// 如果是 已经发布了的，则保存到正式表
 	if isReleased {
@@ -1083,19 +1082,21 @@ func (w *Website) SaveArchive(req *request.Archive) (*model.Archive, error) {
 		// 处理 images
 		hasChangeImg := false
 		for i, v := range draft.Images {
-			if strings.HasPrefix(v, w.PluginStorage.StorageUrl) {
+			// 已经指向本站资源的不用下载（⚠️ 资源地址为空时不能让空前缀把所有地址都判成本站）
+			if config.HasStoragePrefix(v, w.PluginStorage.StorageUrl) {
 				continue
 			}
-			if strings.HasPrefix(v, "//") || strings.HasPrefix(v, "http") {
-				imgUrl, err2 := url.Parse(v)
-				if err2 == nil && imgUrl.Host != "" && imgUrl.Host != baseHost {
-					// 自动下载
-					attachment, err2 := w.DownloadRemoteImage(v, draft.Title, 0)
-					if err2 == nil {
-						// 下载完成
-						draft.Images[i] = strings.TrimPrefix(attachment.Logo, w.PluginStorage.StorageUrl)
-						hasChangeImg = true
-					}
+			if !config.IsAbsoluteUrl(v) {
+				continue
+			}
+			imgUrl, err2 := url.Parse(v)
+			if err2 == nil && imgUrl.Host != "" && imgUrl.Host != baseHost {
+				// 自动下载
+				attachment, err2 := w.DownloadRemoteImage(v, draft.Title, 0)
+				if err2 == nil {
+					// 下载完成
+					draft.Images[i] = config.StripStorageUrl(attachment.Logo, w.PluginStorage.StorageUrl)
+					hasChangeImg = true
 				}
 			}
 		}
@@ -1116,7 +1117,7 @@ func (w *Website) SaveArchive(req *request.Archive) (*model.Archive, error) {
 				}
 				imgUrl, err2 := url.Parse(match[1])
 				if err2 == nil {
-					if imgUrl.Host != "" && imgUrl.Host != baseHost && !strings.HasPrefix(match[1], w.PluginStorage.StorageUrl) {
+					if imgUrl.Host != "" && imgUrl.Host != baseHost && !config.HasStoragePrefix(match[1], w.PluginStorage.StorageUrl) {
 						//外链
 						attachment, err2 := w.DownloadRemoteImage(match[1], draft.Title, 0)
 						if err2 == nil {
@@ -1137,7 +1138,7 @@ func (w *Website) SaveArchive(req *request.Archive) (*model.Archive, error) {
 				}
 				imgUrl, err2 := url.Parse(match[2])
 				if err2 == nil {
-					if imgUrl.Host != "" && imgUrl.Host != baseHost && !strings.HasPrefix(match[2], w.PluginStorage.StorageUrl) {
+					if imgUrl.Host != "" && imgUrl.Host != baseHost && !config.HasStoragePrefix(match[2], w.PluginStorage.StorageUrl) {
 						//外链
 						attachment, err2 := w.DownloadRemoteImage(match[2], draft.Title, 0)
 						if err2 == nil {
@@ -1180,7 +1181,7 @@ func (w *Website) SaveArchive(req *request.Archive) (*model.Archive, error) {
 					w.DB.Model(&archiveData).UpdateColumn("content", content)
 				}
 				if len(logo) > 0 {
-					draft.Images = append(draft.Images, strings.TrimPrefix(logo, w.PluginStorage.StorageUrl))
+					draft.Images = append(draft.Images, config.StripStorageUrl(logo, w.PluginStorage.StorageUrl))
 				}
 				if isReleased {
 					w.DB.Model(&draft.Archive).UpdateColumn("images", draft.Images)
@@ -1404,20 +1405,20 @@ func (w *Website) DeleteArchive(archive *model.Archive) error {
 }
 
 func (w *Website) DeleteArchiveDraft(draft *model.ArchiveDraft) error {
-	w.DB.Unscoped().Delete(draft)
-	// 删除 文档内容
-	w.DB.Unscoped().Where("`id` = ?", draft.Id).Delete(&model.ArchiveData{})
-	// 删除 文档分类
-	w.DB.Unscoped().Where("`archive_id` = ?", draft.Id).Delete(&model.ArchiveCategory{})
-	// 删除 文档Flag
-	w.DB.Unscoped().Where("`archive_id` = ?", draft.Id).Delete(&model.ArchiveFlag{})
-	// 删除 文档TagData
-	w.DB.Unscoped().Where("`item_id` = ?", draft.Id).Delete(&model.TagData{})
-	// 删除模型数据
-	module := w.GetModuleFromCache(draft.ModuleId)
-	if module != nil {
-		w.DB.Exec("DELETE FROM ? WHERE `id` = ?", clause.Table{Name: module.TableName}, draft.Id)
+	if draft == nil {
+		return nil
 	}
+	// 正文、模块副表、分类、属性、标签、草稿行统一走 CleanArchiveRelations，
+	// 与「30 天自动清理」共用同一份逻辑，避免两边漏删不一致。
+	mapModules := make(map[uint]model.Module, 8)
+	for _, v := range w.GetCacheModules() {
+		mapModules[v.Id] = v
+	}
+	// 正文里引用的图片/附件必须在删除数据库记录之前收集
+	files := w.collectArchiveUploadRefs([]int64{draft.Id}, draft.ModuleId, draft.Images)
+	w.CleanArchiveRelations(draft.Id, draft.ModuleId, mapModules)
+	// 彻底删除（回收站）时一并清掉正文引用的 uploads 文件
+	w.CleanupArchiveUploads(files)
 
 	return nil
 }
@@ -1757,14 +1758,48 @@ func (w *Website) CleanArchives() {
 		for _, v := range modules {
 			mapModules[v.Id] = v
 		}
+		// 按模块归组，分批收集正文引用的文件（必须在删库之前）
+		idsByModule := map[uint][]int64{}
 		for _, draft := range drafts {
-			w.DB.Unscoped().Where("id = ?", draft.Id).Delete(model.ArchiveData{})
-			if module, ok := mapModules[draft.ModuleId]; ok {
-				w.DB.Unscoped().Where("id = ?", draft.Id).Delete(module.TableName)
-			}
-			w.DB.Unscoped().Where("id = ?", draft.Id).Delete(model.ArchiveDraft{})
+			idsByModule[draft.ModuleId] = append(idsByModule[draft.ModuleId], draft.Id)
+		}
+		var files []string
+		for moduleId, ids := range idsByModule {
+			files = append(files, w.collectArchiveUploadRefs(ids, moduleId)...)
+		}
+		for _, draft := range drafts {
+			w.CleanArchiveRelations(draft.Id, draft.ModuleId, mapModules)
+		}
+		w.CleanupArchiveUploads(files)
+		if w.Cache != nil {
+			// 列表缓存里可能还留着已删除文档
+			w.Cache.CleanAll("archive-list")
 		}
 	}
+}
+
+// CleanArchiveRelations 彻底清掉一篇文档的全部落库数据：正文、模块副表、分类、属性、标签、草稿行。
+//
+// ⚠️ 模块副表必须用 Exec + clause.Table 拼表名：
+// 写成 Delete(module.TableName) 时 GORM 会把字符串当成主键值，
+// 直接报 "unsupported data type ... Table not set" 并**静默跳过**，
+// 于是文档删了、副表数据一直留着（历史遗留的孤儿行就是这么来的）。
+func (w *Website) CleanArchiveRelations(id int64, moduleId uint, modules map[uint]model.Module) {
+	if w.DB == nil || id <= 0 {
+		return
+	}
+	// 正文
+	w.DB.Unscoped().Where("`id` = ?", id).Delete(&model.ArchiveData{})
+	// 模块副表
+	if module, ok := modules[moduleId]; ok && module.TableName != "" {
+		w.DB.Exec("DELETE FROM ? WHERE `id` = ?", clause.Table{Name: module.TableName}, id)
+	}
+	// 分类、推荐属性、标签
+	w.DB.Unscoped().Where("`archive_id` = ?", id).Delete(&model.ArchiveCategory{})
+	w.DB.Unscoped().Where("`archive_id` = ?", id).Delete(&model.ArchiveFlag{})
+	w.DB.Unscoped().Where("`item_id` = ?", id).Delete(&model.TagData{})
+	// 草稿（回收站）行
+	w.DB.Unscoped().Where("`id` = ?", id).Delete(&model.ArchiveDraft{})
 }
 
 // VerifyArchiveUrlToken token增加a标记：token-a-id
@@ -2859,18 +2894,19 @@ func (qia *QuickImportArchive) startExcel(file io.Reader) error {
 		if qia.w.Content.RemoteDownload == 1 {
 			// 处理 images
 			for ii, v := range archive.Images {
-				if strings.HasPrefix(v, qia.w.PluginStorage.StorageUrl) {
+				if config.HasStoragePrefix(v, qia.w.PluginStorage.StorageUrl) {
 					continue
 				}
-				if strings.HasPrefix(v, "//") || strings.HasPrefix(v, "http") {
-					imgUrl, err2 := url.Parse(v)
-					if err2 == nil && imgUrl.Host != "" && imgUrl.Host != baseHost {
-						// 自动下载
-						attachment, err2 := qia.w.DownloadRemoteImage(v, archive.Title, 0)
-						if err2 == nil {
-							// 下载完成
-							archive.Images[ii] = strings.TrimPrefix(attachment.Logo, qia.w.PluginStorage.StorageUrl)
-						}
+				if !config.IsAbsoluteUrl(v) {
+					continue
+				}
+				imgUrl, err2 := url.Parse(v)
+				if err2 == nil && imgUrl.Host != "" && imgUrl.Host != baseHost {
+					// 自动下载
+					attachment, err2 := qia.w.DownloadRemoteImage(v, archive.Title, 0)
+					if err2 == nil {
+						// 下载完成
+						archive.Images[ii] = config.StripStorageUrl(attachment.Logo, qia.w.PluginStorage.StorageUrl)
 					}
 				}
 			}

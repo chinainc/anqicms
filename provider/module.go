@@ -4,6 +4,7 @@ import (
 	"errors"
 	"regexp"
 
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"kandaoni.com/anqicms/config"
 	"kandaoni.com/anqicms/model"
@@ -198,25 +199,90 @@ func (w *Website) DeleteModuleField(moduleId uint, fieldName string) error {
 }
 
 func (w *Website) DeleteModule(module *model.Module) error {
-	// 删除该模型的所有内容
-	// 删除 archive data
-	var ids []uint
-	for {
-		w.DB.Model(&model.Archive{}).Unscoped().Where("module_id = ?", module.Id).Limit(1000).Pluck("id", &ids)
+	if module == nil || w.DB == nil {
+		return errors.New("module not found")
+	}
+	var firstErr error
+	var files []string
+	// 单次批量，避免大表一次性 load 出所有 id
+	const batchSize = 1000
+	for i := 0; i < 100000; i++ {
+		ids := make([]int64, 0, batchSize)
+		err := w.DB.Model(&model.Archive{}).Unscoped().Where("`module_id` = ?", module.Id).Order("id").Limit(batchSize).Pluck("id", &ids).Error
+		if err != nil {
+			firstErr = err
+			break
+		}
 		if len(ids) == 0 {
 			break
 		}
-		w.DB.Unscoped().Where("id IN(?)", ids).Delete(model.ArchiveData{})
-		w.DB.Unscoped().Where("id IN(?)", ids).Delete(model.Archive{})
+		// 正文里引用的图片/附件必须在删除数据库记录之前收集
+		files = append(files, w.collectArchiveUploadRefs(ids, module.Id)...)
+		if err = w.deleteArchiveRelationsBatch(ids, module.TableName); err != nil {
+			firstErr = err
+			break
+		}
+	}
+	// 草稿箱 / 待审核 / 回收站里的内容同样属于该模型，必须一起删
+	// （历史实现只删 archives，导致删掉模型后回收站里还能看到这些文档和正文）
+	for i := 0; i < 100000; i++ {
+		ids := make([]int64, 0, batchSize)
+		err := w.DB.Model(&model.ArchiveDraft{}).Unscoped().Where("`module_id` = ?", module.Id).Order("id").Limit(batchSize).Pluck("id", &ids).Error
+		if err != nil {
+			firstErr = err
+			break
+		}
+		if len(ids) == 0 {
+			break
+		}
+		files = append(files, w.collectArchiveUploadRefs(ids, module.Id)...)
+		if err = w.deleteArchiveRelationsBatch(ids, module.TableName); err != nil {
+			firstErr = err
+			break
+		}
 	}
 	// 删除模型表
 	if w.DB.Migrator().HasTable(module.TableName) {
-		w.DB.Migrator().DropTable(module.TableName)
+		if err := w.DB.Migrator().DropTable(module.TableName); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	// 模型下的栏目一起删掉，否则会留下指向已删除模型的孤儿栏目
+	if err := w.DB.Where("`module_id` = ?", module.Id).Delete(&model.Category{}).Error; err != nil && firstErr == nil {
+		firstErr = err
 	}
 	// 删除 module
-	w.DB.Delete(module)
+	if err := w.DB.Delete(module).Error; err != nil && firstErr == nil {
+		firstErr = err
+	}
+	// 清理正文引用的 uploads 文件（其它文档/栏目/设置仍在用的会保留）
+	w.CleanupArchiveUploads(files)
 
-	return nil
+	return firstErr
+}
+
+// deleteArchiveRelationsBatch 按 id 批量删除文档的正文、模块副表、分类、属性、标签、草稿行与正式行。
+func (w *Website) deleteArchiveRelationsBatch(ids []int64, moduleTable string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	var firstErr error
+	saveErr := func(tx *gorm.DB) {
+		if tx.Error != nil && firstErr == nil {
+			firstErr = tx.Error
+		}
+	}
+	saveErr(w.DB.Unscoped().Where("`id` IN (?)", ids).Delete(&model.ArchiveData{}))
+	if moduleTable != "" && archiveUploadSafeName.MatchString(moduleTable) && w.DB.Migrator().HasTable(moduleTable) {
+		saveErr(w.DB.Exec("DELETE FROM ? WHERE `id` IN (?)", clause.Table{Name: moduleTable}, ids))
+	}
+	saveErr(w.DB.Unscoped().Where("`archive_id` IN (?)", ids).Delete(&model.ArchiveCategory{}))
+	saveErr(w.DB.Unscoped().Where("`archive_id` IN (?)", ids).Delete(&model.ArchiveFlag{}))
+	saveErr(w.DB.Unscoped().Where("`item_id` IN (?)", ids).Delete(&model.TagData{}))
+	saveErr(w.DB.Unscoped().Where("`id` IN (?)", ids).Delete(&model.ArchiveDraft{}))
+	saveErr(w.DB.Unscoped().Where("`id` IN (?)", ids).Delete(&model.Archive{}))
+
+	return firstErr
 }
 
 func (w *Website) DeleteCacheModules() {

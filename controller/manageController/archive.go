@@ -821,34 +821,39 @@ func ArchiveDelete(ctx iris.Context) {
 
 		currentSite.AddAdminLog(ctx, ctx.Tr("DeleteDocumentLog", archive.Id, archive.Title))
 	} else {
-		// 从草稿表删除
-		archiveDraft, err := currentSite.GetArchiveDraftById(req.Id)
-		if err == nil {
-			err = currentSite.DeleteArchiveDraft(archiveDraft)
-			if err != nil {
-				ctx.JSON(iris.Map{
-					"code": config.StatusFailed,
-					"msg":  err.Error(),
-				})
-				return
-			}
-			// 如果开启了多语言，则自动同步文章,分类
-			if currentSite.MultiLanguage.Open {
-				for _, sub := range currentSite.MultiLanguage.SubSites {
-					if sub.Id == currentSite.Id || sub.Id == 0 {
-						continue
-					}
-					// 同步分类，先同步，再添加翻译计划
-					subSite := provider.GetWebsite(sub.Id)
-					if subSite != nil && subSite.Initialed {
-						// 同步更新
-						_ = subSite.DeleteArchiveDraft(archiveDraft)
-					}
+		// 从草稿表删除（回收站，正文与关联数据在这里才真正清掉）
+		archiveDraft, draftErr := currentSite.GetArchiveDraftById(req.Id)
+		if draftErr != nil || archiveDraft == nil {
+			// ⚠️ 不能再假装成功：以前两边都查不到时也回 err=0，
+			// 前端提示「删除成功」但其实一条数据都没动。
+			ctx.JSON(iris.Map{
+				"code": config.StatusFailed,
+				"msg":  ctx.Tr("DocumentDoesNotExist"),
+			})
+			return
+		}
+		err = currentSite.DeleteArchiveDraft(archiveDraft)
+		if err != nil {
+			ctx.JSON(iris.Map{
+				"code": config.StatusFailed,
+				"msg":  err.Error(),
+			})
+			return
+		}
+		// 如果开启了多语言，则自动同步删除
+		if currentSite.MultiLanguage.Open {
+			for _, sub := range currentSite.MultiLanguage.SubSites {
+				if sub.Id == currentSite.Id || sub.Id == 0 {
+					continue
+				}
+				subSite := provider.GetWebsite(sub.Id)
+				if subSite != nil && subSite.Initialed {
+					_ = subSite.DeleteArchiveDraft(archiveDraft)
 				}
 			}
-
-			currentSite.AddAdminLog(ctx, ctx.Tr("DeleteDocumentLog", archiveDraft.Id, archiveDraft.Title))
 		}
+
+		currentSite.AddAdminLog(ctx, ctx.Tr("DeleteDocumentLog", archiveDraft.Id, archiveDraft.Title))
 	}
 
 	ctx.JSON(iris.Map{

@@ -125,7 +125,7 @@ func AutoMigrateMemberCenter(db *gorm.DB) {
 		return
 	}
 	if err := db.Set("gorm:table_options", "DEFAULT CHARSET=utf8mb4").
-		AutoMigrate(&model.Recharge{}, &model.Guestbook{}, &model.UserAuth{}); err != nil {
+		AutoMigrate(&model.Recharge{}, &model.Guestbook{}, &model.UserAuth{}, &model.DiyPage{}); err != nil {
 		log.Println("migrate member center error ", err)
 	}
 	// 会员开放接口密钥（只加一列，不做整表迁移，避免 users 表被重排）

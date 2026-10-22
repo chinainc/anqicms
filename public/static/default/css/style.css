@@ -1829,3 +1829,242 @@ textarea:focus {
 		font-size: 0.14rem;
 	}
 }
+
+/* ---------------------------------------------------------- 可视化装修区块 */
+.diy-block {
+	position: relative;
+}
+
+.diy-block__head {
+	margin: 0 0 0.3rem;
+	text-align: center;
+}
+
+.diy-block__head h2 {
+	font-size: 0.3rem;
+	font-weight: 400;
+	color: #1f2329;
+	letter-spacing: 0.02rem;
+}
+
+/* banner */
+.diy-banner {
+	padding: 0;
+}
+
+.diy-banner .container {
+	width: 100%;
+	padding: 0;
+}
+
+.diy-banner__track {
+	display: flex;
+	overflow-x: auto;
+	scroll-snap-type: x mandatory;
+	scrollbar-width: none;
+}
+
+.diy-banner__track::-webkit-scrollbar {
+	display: none;
+}
+
+.diy-banner__item {
+	flex: 0 0 100%;
+	scroll-snap-align: start;
+	display: block;
+}
+
+.diy-banner__item img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+/* 公告 */
+.diy-notice {
+	padding: 0.12rem 0;
+	background: #f2f8ff;
+	border-bottom: 1px solid #e2eeff;
+	font-size: 0.14rem;
+}
+
+.diy-notice a {
+	display: flex;
+	align-items: center;
+	gap: 0.08rem;
+	color: inherit;
+}
+
+.diy-notice__text {
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+/* 富文本 */
+.diy-richtext {
+	padding: 0.5rem 0;
+}
+
+.diy-richtext__body {
+	font-size: 0.15rem;
+	line-height: 1.9;
+	color: #555;
+}
+
+.diy-richtext__body img {
+	max-width: 100%;
+	height: auto;
+}
+
+/* 单图 */
+.diy-image {
+	padding: 0.3rem 0;
+}
+
+.diy-image--full {
+	padding: 0;
+}
+
+.diy-image--full img {
+	display: block;
+	width: 100%;
+}
+
+.diy-image--center img {
+	display: block;
+	max-width: 100%;
+	margin: 0 auto;
+	border-radius: 0.06rem;
+}
+
+/* 图文导航 */
+.diy-nav {
+	padding: 0.45rem 0;
+	background: #fff;
+}
+
+.diy-nav__grid {
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	gap: 0.2rem;
+}
+
+.diy-nav__item {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.1rem;
+	color: #333;
+	transition: transform 0.2s;
+}
+
+.diy-nav__item:hover {
+	transform: translateY(-2px);
+}
+
+.diy-nav__icon img {
+	width: 0.56rem;
+	height: 0.56rem;
+	object-fit: contain;
+}
+
+.diy-nav__title {
+	font-size: 0.14rem;
+}
+
+/* 产品 / 文章卡片 */
+.diy-archives {
+	padding: 0.5rem 0;
+	background: #f7f9fb;
+}
+
+.diy-archives__grid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 0.2rem;
+}
+
+.diy-card {
+	display: flex;
+	flex-direction: column;
+	background: #fff;
+	border: 1px solid #eef0f3;
+	border-radius: 0.06rem;
+	overflow: hidden;
+	transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.diy-card:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 20px rgba(15, 34, 58, 0.08);
+}
+
+.diy-card__thumb img {
+	display: block;
+	width: 100%;
+	aspect-ratio: 4 / 3;
+	object-fit: cover;
+}
+
+.diy-card__body {
+	padding: 0.12rem 0.14rem 0.16rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.06rem;
+}
+
+.diy-card__title {
+	font-style: normal;
+	font-size: 0.14rem;
+	color: #1f2329;
+	line-height: 1.5;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.diy-card__desc {
+	font-style: normal;
+	font-size: 0.12rem;
+	color: #8a97a3;
+	line-height: 1.6;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.diy-card__price {
+	font-style: normal;
+	font-size: 0.16rem;
+	color: #e5484d;
+}
+
+.diy-divider {
+	width: 100%;
+}
+
+@media (max-width: 768px) {
+	.diy-block__head h2 {
+		font-size: 0.22rem;
+	}
+
+	.diy-nav__grid {
+		grid-template-columns: repeat(4, 1fr);
+		gap: 0.14rem;
+	}
+
+	.diy-archives__grid {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 0.12rem;
+	}
+
+	.diy-richtext,
+	.diy-archives,
+	.diy-nav {
+		padding: 0.3rem 0;
+	}
+}

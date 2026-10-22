@@ -1,6 +1,10 @@
 {% extends 'base.html' %}
 
 {% block container %}
+{% if diyHome %}
+{# 后台「可视化装修」已配置：整页由区块渲染，默认内容不再输出 #}
+{{ diyHome|safe }}
+{% else %}
 <!-- slider -->
 <div class="slider">
     {% bannerList banners %}
@@ -151,4 +155,5 @@
     </div>
 </div>
 <!-- flink -->
+{% endif %}
 {% endblock %}

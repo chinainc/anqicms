@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>可视化装修 - 后台</title>
+    <style>
+        :root {
+            --pri: #1677ff;
+            --ok: #1a9e59;
+            --danger: #e5484d;
+            --text: #1f2329;
+            --text2: #5c6b7a;
+            --text3: #86909c;
+            --line: #e8ebef;
+            --bg: #f5f7fa;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body { height: 100%; }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font: 14px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 顶栏 */
+        .bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            background: #fff;
+            border-bottom: 1px solid var(--line);
+            flex: 0 0 auto;
+        }
+
+        .bar h1 { margin: 0 8px 0 0; font-size: 16px; font-weight: 600; }
+        .bar .spacer { flex: 1; }
+        .bar .status { font-size: 12px; color: var(--text3); }
+
+        select, input, textarea {
+            font-family: inherit;
+            font-size: 13px;
+            color: var(--text);
+        }
+
+        select.sel {
+            height: 32px;
+            padding: 0 10px;
+            border: 1px solid #dcdfe6;
+            border-radius: 6px;
+            background: #fff;
+            outline: none;
+        }
+
+        .btn {
+            height: 32px;
+            padding: 0 14px;
+            border: 1px solid #dcdfe6;
+            border-radius: 6px;
+            background: #fff;
+            cursor: pointer;
+            transition: all .15s;
+        }
+
+        .btn:hover { border-color: var(--pri); color: var(--pri); }
+        .btn-primary { background: var(--pri); border-color: var(--pri); color: #fff; }
+        .btn-primary:hover { background: #4096ff; color: #fff; }
+        .btn-ok { background: var(--ok); border-color: var(--ok); color: #fff; }
+        .btn-ok:hover { background: #28b96c; color: #fff; }
+        .btn-danger { color: var(--danger); border-color: #f5c2c2; }
+        .btn-danger:hover { background: #fdecec; color: var(--danger); border-color: var(--danger); }
+        .btn-sm { height: 26px; padding: 0 10px; font-size: 12px; }
+        .btn[disabled] { opacity: .5; cursor: not-allowed; }
+
+        /* 三栏 */
+        .main {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+        }
+
+        .col {
+            height: 100%;
+            overflow: auto;
+            background: #fff;
+        }
+
+        .col-left {
+            flex: 0 0 200px;
+            border-right: 1px solid var(--line);
+            padding: 12px;
+        }
+
+        .col-center {
+            flex: 1;
+            min-width: 0;
+            padding: 14px 16px 40px;
+            background: var(--bg);
+        }
+
+        .col-right {
+            flex: 0 0 330px;
+            border-left: 1px solid var(--line);
+            padding: 14px;
+        }
+
+        .col-title {
+            margin: 0 0 10px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text3);
+            letter-spacing: .02em;
+        }
+
+        /* 模块库 */
+        .palette {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .palette button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 10px 4px;
+            border: 1px dashed #d8dee6;
+            border-radius: 8px;
+            background: #fafbfc;
+            color: var(--text2);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all .15s;
+        }
+
+        .palette button:hover {
+            border-color: var(--pri);
+            color: var(--pri);
+            background: #f0f7ff;
+        }
+
+        .palette button i { font-size: 18px; font-style: normal; }
+
+        /* 画布 */
+        .canvas-empty {
+            padding: 60px 20px;
+            text-align: center;
+            color: var(--text3);
+            border: 1px dashed #d8dee6;
+            border-radius: 10px;
+            background: #fff;
+        }
+
+        .block {
+            position: relative;
+            margin-bottom: 10px;
+            padding: 12px 14px;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: border-color .15s, box-shadow .15s;
+        }
+
+        .block:hover { border-color: #b9d4ff; }
+
+        .block.is-active {
+            border-color: var(--pri);
+            box-shadow: 0 0 0 2px rgba(22, 119, 255, .12);
+        }
+
+        .block.is-drag { opacity: .45; }
+
+        .block__head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .block__icon { font-size: 16px; }
+        .block__name { font-weight: 600; font-size: 13px; }
+        .block__meta { font-size: 12px; color: var(--text3); margin-left: 6px; }
+        .block__ops { margin-left: auto; display: flex; gap: 4px; }
+
+        .block__ops button {
+            width: 24px;
+            height: 24px;
+            padding: 0;
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            background: #fff;
+            color: var(--text2);
+            font-size: 12px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .block__ops button:hover { border-color: var(--pri); color: var(--pri); }
+        .block__ops button.del:hover { border-color: var(--danger); color: var(--danger); }
+
+        .block__preview {
+            margin-top: 8px;
+            padding: 8px 10px;
+            background: var(--bg);
+            border-radius: 6px;
+            font-size: 12px;
+            color: var(--text2);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 属性面板 */
+        .field { margin-bottom: 12px; }
+        .field > label { display: block; margin-bottom: 5px; font-size: 12px; color: var(--text2); }
+
+        .field input[type=text],
+        .field input[type=number],
+        .field select,
+        .field textarea {
+            width: 100%;
+            padding: 6px 9px;
+            border: 1px solid #dcdfe6;
+            border-radius: 6px;
+            outline: none;
+            background: #fff;
+        }
+
+        .field input:focus, .field select:focus, .field textarea:focus {
+            border-color: var(--pri);
+            box-shadow: 0 0 0 2px rgba(22, 119, 255, .1);
+        }
+
+        .field textarea { resize: vertical; min-height: 80px; font-family: inherit; }
+        .field .tip { margin: 4px 0 0; font-size: 11px; color: var(--text3); }
+
+        .field-color { display: flex; gap: 8px; align-items: center; }
+        .field-color input[type=color] { width: 40px; height: 30px; padding: 2px; border: 1px solid #dcdfe6; border-radius: 6px; background: #fff; }
+
+        /* 图片字段 */
+        .img-pick {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .img-pick__box {
+            width: 84px;
+            height: 62px;
+            border: 1px dashed #d8dee6;
+            border-radius: 6px;
+            background: #fafbfc center/cover no-repeat;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text3);
+            font-size: 11px;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .img-pick__box img { width: 100%; height: 100%; object-fit: cover; }
+        .img-pick__ops { display: flex; flex-direction: column; gap: 6px; }
+
+        /* 列表字段 */
+        .list-item {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #fafbfc;
+        }
+
+        .list-item__head {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: var(--text3);
+        }
+
+        .list-item__head .ops { margin-left: auto; display: flex; gap: 4px; }
+
+        .list-add { width: 100%; }
+
+        /* 预览 */
+        .preview-mask {
+            position: fixed;
+            inset: 0;
+            z-index: 30;
+            display: none;
+            flex-direction: column;
+            background: #fff;
+        }
+
+        .preview-mask.is-open { display: flex; }
+
+        .preview-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 14px;
+            border-bottom: 1px solid var(--line);
+            background: #fff;
+            flex: 0 0 auto;
+        }
+
+        .preview-bar .spacer { flex: 1; }
+        .preview-mask iframe { flex: 1; width: 100%; border: 0; }
+
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: 40px;
+            transform: translateX(-50%);
+            z-index: 60;
+            padding: 8px 16px;
+            border-radius: 6px;
+            background: rgba(31, 35, 41, .9);
+            color: #fff;
+            font-size: 13px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .2s, transform .2s;
+        }
+
+        .toast.is-show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+        .toast.is-error { background: rgba(229, 72, 77, .95); }
+    </style>
+</head>
+<body>
+<div class="bar">
+    <h1>可视化装修</h1>
+    <select class="sel" id="page-key"></select>
+    <button type="button" class="btn btn-ok" id="save-btn">保存</button>
+    <button type="button" class="btn" id="preview-btn">预览</button>
+    <button type="button" class="btn btn-danger" id="reset-btn">清空装修</button>
+    <span class="spacer"></span>
+    <span class="status" id="status">加载中…</span>
+</div>
+
+<div class="main">
+    <div class="col col-left">
+        <p class="col-title">模块库（点击添加）</p>
+        <div class="palette" id="palette"></div>
+    </div>
+    <div class="col col-center">
+        <p class="col-title">页面区块（拖动可排序，点击可编辑）</p>
+        <div id="canvas"></div>
+    </div>
+    <div class="col col-right">
+        <p class="col-title">区块设置</p>
+        <div id="props"><p class="tip">先在中间选择一个区块</p></div>
+    </div>
+</div>
+
+<div class="preview-mask" id="preview-mask">
+    <div class="preview-bar">
+        <strong>前台预览</strong>
+        <span class="status" id="preview-url"></span>
+        <span class="spacer"></span>
+        <button type="button" class="btn" id="preview-reload">刷新</button>
+        <button type="button" class="btn" id="preview-close">关闭</button>
+    </div>
+    <iframe id="preview-frame" title="预览"></iframe>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+    (function () {
+        var state = {
+            pages: [],
+            types: [],
+            typeMap: {},
+            key: 'home',
+            title: '',
+            modules: [],
+            selected: -1,
+            dirty: false
+        };
+
+        var el = {
+            pageKey: document.getElementById('page-key'),
+            palette: document.getElementById('palette'),
+            canvas: document.getElementById('canvas'),
+            props: document.getElementById('props'),
+            status: document.getElementById('status'),
+            toast: document.getElementById('toast'),
+            mask: document.getElementById('preview-mask'),
+            frame: document.getElementById('preview-frame'),
+            previewUrl: document.getElementById('preview-url')
+        };
+
+        function toast(msg, isError) {
+            el.toast.textContent = msg;
+            el.toast.className = 'toast is-show' + (isError ? ' is-error' : '');
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(function () {
+                el.toast.className = 'toast';
+            }, 2200);
+        }
+
+        function api(url, options) {
+            options = options || {};
+            options.credentials = 'same-origin';
+            if (options.body && typeof options.body !== 'string' && !(options.body instanceof FormData)) {
+                options.headers = { 'Content-Type': 'application/json' };
+                options.body = JSON.stringify(options.body);
+            }
+            return fetch(url, options).then(function (res) {
+                return res.json();
+            }).then(function (data) {
+                if (data && data.code === 0) {
+                    return data.data || {};
+                }
+                throw new Error((data && data.msg) || '请求失败');
+            });
+        }
+
+        function uid(type) {
+            return type + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+        }
+
+        function escapeHtml(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+        }
+
+        // ───────────────────────────── 加载
+        function load() {
+            return api('/system/api/diy/types').then(function (data) {
+                state.types = data.types || [];
+                state.pages = data.pages || [];
+                state.typeMap = {};
+                state.types.forEach(function (t) { state.typeMap[t.type] = t; });
+                renderPageSelect();
+                renderPalette();
+                return loadPage(state.pages.length ? state.pages[0].value : 'home');
+            });
+        }
+
+        function loadPage(key) {
+            state.key = key;
+            el.pageKey.value = key;
+            return api('/system/api/diy/page?key=' + encodeURIComponent(key)).then(function (data) {
+                state.title = data.title || '';
+                state.modules = (data.modules || []).map(function (m) {
+                    return {
+                        id: m.id || uid(m.type),
+                        type: m.type,
+                        settings: m.settings || {}
+                    };
+                });
+                state.selected = state.modules.length ? 0 : -1;
+                state.dirty = false;
+                render();
+                setStatus();
+            });
+        }
+
+        function renderPageSelect() {
+            el.pageKey.innerHTML = state.pages.map(function (p) {
+                return '<option value="' + escapeHtml(p.value) + '">' + escapeHtml(p.label) + '</option>';
+            }).join('');
+        }
+
+        function setStatus(text) {
+            if (text) {
+                el.status.textContent = text;
+                return;
+            }
+            el.status.textContent = state.modules.length + ' 个区块' + (state.dirty ? '（未保存）' : '（已保存）');
+        }
+
+        // ───────────────────────────── 模块库
+        function renderPalette() {
+            el.palette.innerHTML = '';
+            state.types.forEach(function (t) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.innerHTML = '<i>' + escapeHtml(t.icon || '▦') + '</i><span>' + escapeHtml(t.title) + '</span>';
+                btn.title = t.desc || '';
+                btn.addEventListener('click', function () {
+                    addModule(t.type);
+                });
+                el.palette.appendChild(btn);
+            });
+        }
+
+        function defaultSettings(type) {
+            var def = state.typeMap[type];
+            var out = {};
+            if (!def) {
+                return out;
+            }
+            (def.fields || []).forEach(function (f) {
+                if (f.default !== undefined) {
+                    out[f.name] = f.default;
+                } else if (f.type === 'list') {
+                    out[f.name] = [];
+                }
+            });
+            return out;
+        }
+
+        function addModule(type) {
+            var mod = { id: uid(type), type: type, settings: defaultSettings(type) };
+            state.modules.push(mod);
+            state.selected = state.modules.length - 1;
+            state.dirty = true;
+            render();
+        }
+
+        // ───────────────────────────── 画布
+        function render() {
+            renderCanvas();
+            renderProps();
+            setStatus();
+        }
+
+        function moduleSummary(mod) {
+            var s = mod.settings || {};
+            var t = state.typeMap[mod.type] || {};
+            var parts = [];
+            if (t.fields) {
+                t.fields.forEach(function (f) {
+                    if (f.type === 'list') {
+                        var n = (s[f.name] || []).length;
+                        if (n) { parts.push(f.label + ' ' + n + ' 项'); }
+                    } else if (s[f.name] !== undefined && s[f.name] !== '' && f.type !== 'color') {
+                        parts.push(String(s[f.name]).slice(0, 24));
+                    }
+                });
+            }
+            return parts.join(' · ') || '未配置';
+        }
+
+        function renderCanvas() {
+            el.canvas.innerHTML = '';
+            if (!state.modules.length) {
+                var empty = document.createElement('div');
+                empty.className = 'canvas-empty';
+                empty.innerHTML = '还没有任何区块<br>从左侧模块库点选添加，或点右上角「预览」查看当前模板效果';
+                el.canvas.appendChild(empty);
+                return;
+            }
+
+            state.modules.forEach(function (mod, index) {
+                var def = state.typeMap[mod.type] || { title: mod.type, icon: '▦' };
+                var card = document.createElement('div');
+                card.className = 'block' + (index === state.selected ? ' is-active' : '');
+                card.draggable = true;
+                card.dataset.index = index;
+                card.innerHTML = [
+                    '<div class="block__head">',
+                    '  <span class="block__icon">' + escapeHtml(def.icon || '▦') + '</span>',
+                    '  <span class="block__name">' + escapeHtml(def.title || mod.type) + '</span>',
+                    '  <span class="block__meta">#' + (index + 1) + '</span>',
+                    '  <span class="block__ops">',
+                    '    <button type="button" data-op="up" title="上移">↑</button>',
+                    '    <button type="button" data-op="down" title="下移">↓</button>',
+                    '    <button type="button" data-op="del" class="del" title="删除">✕</button>',
+                    '  </span>',
+                    '</div>',
+                    '<div class="block__preview">' + escapeHtml(moduleSummary(mod)) + '</div>'
+                ].join('');
+
+                card.addEventListener('click', function (e) {
+                    var op = e.target.getAttribute('data-op');
+                    if (op) {
+                        e.stopPropagation();
+                        if (op === 'up' && index > 0) {
+                            swap(index, index - 1);
+                        } else if (op === 'down' && index < state.modules.length - 1) {
+                            swap(index, index + 1);
+                        } else if (op === 'del') {
+                            state.modules.splice(index, 1);
+                            state.selected = Math.min(state.selected, state.modules.length - 1);
+                            state.dirty = true;
+                            render();
+                        }
+                        return;
+                    }
+                    state.selected = index;
+                    render();
+                });
+
+                card.addEventListener('dragstart', function (e) {
+                    e.dataTransfer.setData('text/plain', String(index));
+                    card.classList.add('is-drag');
+                });
+                card.addEventListener('dragend', function () {
+                    card.classList.remove('is-drag');
+                });
+                card.addEventListener('dragover', function (e) {
+                    e.preventDefault();
+                });
+                card.addEventListener('drop', function (e) {
+                    e.preventDefault();
+                    var from = parseInt(e.dataTransfer.getData('text/plain'), 10);
+                    if (isNaN(from) || from === index) {
+                        return;
+                    }
+                    var moved = state.modules.splice(from, 1)[0];
+                    state.modules.splice(index, 0, moved);
+                    state.selected = index;
+                    state.dirty = true;
+                    render();
+                });
+
+                el.canvas.appendChild(card);
+            });
+        }
+
+        function swap(a, b) {
+            var tmp = state.modules[a];
+            state.modules[a] = state.modules[b];
+            state.modules[b] = tmp;
+            state.selected = b;
+            state.dirty = true;
+            render();
+        }
+
+        // ───────────────────────────── 属性面板
+        function renderProps() {
+            el.props.innerHTML = '';
+            var mod = state.modules[state.selected];
+            if (!mod) {
+                el.props.innerHTML = '<p class="tip">先在中间选择一个区块</p>';
+                return;
+            }
+            var def = state.typeMap[mod.type];
+            if (!def) {
+                el.props.innerHTML = '<p class="tip">未知区块类型：' + escapeHtml(mod.type) + '</p>';
+                return;
+            }
+
+            var head = document.createElement('div');
+            head.className = 'field';
+            head.innerHTML = '<label>' + escapeHtml(def.icon || '') + ' ' + escapeHtml(def.title) + '</label>' +
+                '<p class="tip">' + escapeHtml(def.desc || '') + '</p>';
+            el.props.appendChild(head);
+
+            (def.fields || []).forEach(function (field) {
+                el.props.appendChild(buildField(field, mod));
+            });
+        }
+
+        function ensureSetting(mod) {
+            if (!mod.settings) {
+                mod.settings = {};
+            }
+            return mod.settings;
+        }
+
+        function buildField(field, mod) {
+            var wrap = document.createElement('div');
+            wrap.className = 'field';
+            var settings = ensureSetting(mod);
+            var value = settings[field.name];
+
+            if (field.type === 'list') {
+                wrap.appendChild(buildListField(field, mod));
+                return wrap;
+            }
+
+            var label = document.createElement('label');
+            label.textContent = field.label + (field.name ? '' : '');
+            wrap.appendChild(label);
+
+            if (field.type === 'select') {
+                var sel = document.createElement('select');
+                (field.options || []).forEach(function (opt) {
+                    var o = document.createElement('option');
+                    o.value = opt.value;
+                    o.textContent = opt.label;
+                    sel.appendChild(o);
+                });
+                sel.value = value !== undefined ? value : (field.default || '');
+                sel.addEventListener('change', function () {
+                    settings[field.name] = sel.value;
+                    state.dirty = true;
+                    renderCanvas();
+                    setStatus();
+                });
+                wrap.appendChild(sel);
+            } else if (field.type === 'color') {
+                var box = document.createElement('div');
+                box.className = 'field-color';
+                var color = document.createElement('input');
+                color.type = 'color';
+                color.value = value || field.default || '#0068ab';
+                var text = document.createElement('input');
+                text.type = 'text';
+                text.value = value || field.default || '';
+                color.addEventListener('input', function () {
+                    text.value = color.value;
+                    settings[field.name] = color.value;
+                    state.dirty = true;
+                    setStatus();
+                });
+                text.addEventListener('input', function () {
+                    settings[field.name] = text.value;
+                    state.dirty = true;
+                    setStatus();
+                });
+                box.appendChild(color);
+                box.appendChild(text);
+                wrap.appendChild(box);
+            } else if (field.type === 'image') {
+                wrap.appendChild(buildImageField(field, settings, value));
+            } else if (field.type === 'richtext') {
+                var ta = document.createElement('textarea');
+                ta.rows = 10;
+                ta.value = value || '';
+                ta.placeholder = field.placeholder || '支持 HTML';
+                ta.addEventListener('input', function () {
+                    settings[field.name] = ta.value;
+                    state.dirty = true;
+                    setStatus();
+                });
+                wrap.appendChild(ta);
+            } else if (field.type === 'number') {
+                var num = document.createElement('input');
+                num.type = 'number';
+                num.value = value !== undefined && value !== '' ? value : (field.default || '');
+                num.addEventListener('input', function () {
+                    settings[field.name] = num.value === '' ? '' : Number(num.value);
+                    state.dirty = true;
+                    renderCanvas();
+                    setStatus();
+                });
+                wrap.appendChild(num);
+            } else {
+                var input = document.createElement('input');
+                input.type = 'text';
+                input.value = value || '';
+                input.placeholder = field.placeholder || '';
+                input.addEventListener('input', function () {
+                    settings[field.name] = input.value;
+                    state.dirty = true;
+                    renderCanvas();
+                    setStatus();
+                });
+                wrap.appendChild(input);
+            }
+
+            if (field.tip) {
+                var tip = document.createElement('p');
+                tip.className = 'tip';
+                tip.textContent = field.tip;
+                wrap.appendChild(tip);
+            }
+            return wrap;
+        }
+
+        function buildImageField(field, settings, value) {
+            var holder = document.createElement('div');
+            holder.className = 'img-pick';
+
+            var box = document.createElement('div');
+            box.className = 'img-pick__box';
+            box.title = '点击上传';
+
+            var ops = document.createElement('div');
+            ops.className = 'img-pick__ops';
+
+            var pickBtn = document.createElement('button');
+            pickBtn.type = 'button';
+            pickBtn.className = 'btn btn-sm';
+            pickBtn.textContent = '上传图片';
+
+            var clearBtn = document.createElement('button');
+            clearBtn.type = 'button';
+            clearBtn.className = 'btn btn-sm btn-danger';
+            clearBtn.textContent = '清空';
+
+            var fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            fileInput.hidden = true;
+
+            function paint() {
+                var path = settings[field.name] || '';
+                if (path) {
+                    box.innerHTML = '<img src="/' + String(path).replace(/^\/+/, '') + '" alt="">';
+                } else {
+                    box.textContent = '未选择';
+                }
+            }
+
+            function upload(file) {
+                var fd = new FormData();
+                fd.append('file', file);
+                box.textContent = '上传中…';
+                api('/system/api/attachment/upload', { method: 'POST', body: fd }).then(function (data) {
+                    settings[field.name] = data.file_location || '';
+                    state.dirty = true;
+                    paint();
+                    renderCanvas();
+                    setStatus();
+                    toast('已上传');
+                }).catch(function (err) {
+                    paint();
+                    toast(err.message, true);
+                });
+            }
+
+            box.addEventListener('click', function () { fileInput.click(); });
+            pickBtn.addEventListener('click', function () { fileInput.click(); });
+            fileInput.addEventListener('change', function () {
+                var file = fileInput.files && fileInput.files[0];
+                fileInput.value = '';
+                if (file) {
+                    upload(file);
+                }
+            });
+            clearBtn.addEventListener('click', function () {
+                settings[field.name] = '';
+                state.dirty = true;
+                paint();
+                renderCanvas();
+                setStatus();
+            });
+
+            ops.appendChild(pickBtn);
+            ops.appendChild(clearBtn);
+            holder.appendChild(box);
+            holder.appendChild(ops);
+            holder.appendChild(fileInput);
+            paint();
+            return holder;
+        }
+
+        function buildListField(field, mod) {
+            var holder = document.createElement('div');
+            var settings = ensureSetting(mod);
+            if (!Array.isArray(settings[field.name])) {
+                settings[field.name] = [];
+            }
+            var rows = settings[field.name];
+
+            var label = document.createElement('label');
+            label.textContent = field.label;
+            holder.appendChild(label);
+
+            function paint() {
+                // 清掉除 label 与 add 按钮外的节点
+                Array.prototype.slice.call(holder.children).forEach(function (node) {
+                    if (node !== label && node.dataset.role !== 'add') {
+                        holder.removeChild(node);
+                    }
+                });
+                rows.forEach(function (row, i) {
+                    var card = document.createElement('div');
+                    card.className = 'list-item';
+
+                    var head = document.createElement('div');
+                    head.className = 'list-item__head';
+                    head.innerHTML = '<span>第 ' + (i + 1) + ' 项</span>';
+                    var ops = document.createElement('span');
+                    ops.className = 'ops';
+
+                    function opBtn(text, title, cb) {
+                        var b = document.createElement('button');
+                        b.type = 'button';
+                        b.className = 'btn btn-sm';
+                        b.textContent = text;
+                        b.title = title;
+                        b.addEventListener('click', cb);
+                        return b;
+                    }
+
+                    ops.appendChild(opBtn('↑', '上移', function () {
+                        if (i === 0) { return; }
+                        var t = rows[i - 1];
+                        rows[i - 1] = rows[i];
+                        rows[i] = t;
+                        state.dirty = true;
+                        paint();
+                        renderCanvas();
+                    }));
+                    ops.appendChild(opBtn('↓', '下移', function () {
+                        if (i === rows.length - 1) { return; }
+                        var t = rows[i + 1];
+                        rows[i + 1] = rows[i];
+                        rows[i] = t;
+                        state.dirty = true;
+                        paint();
+                        renderCanvas();
+                    }));
+                    var del = opBtn('✕', '删除', function () {
+                        rows.splice(i, 1);
+                        state.dirty = true;
+                        paint();
+                        renderCanvas();
+                        setStatus();
+                    });
+                    del.className = 'btn btn-sm btn-danger';
+                    ops.appendChild(del);
+                    head.appendChild(ops);
+                    card.appendChild(head);
+
+                    (field.fields || []).forEach(function (sub) {
+                        card.appendChild(buildField(sub, { settings: row }));
+                    });
+
+                    holder.appendChild(card);
+                });
+
+                var add = document.createElement('button');
+                add.type = 'button';
+                add.className = 'btn btn-sm list-add';
+                add.dataset.role = 'add';
+                add.textContent = '+ 添加' + field.label.replace(/项$/, '');
+                add.addEventListener('click', function () {
+                    rows.push({});
+                    state.dirty = true;
+                    paint();
+                    renderCanvas();
+                    setStatus();
+                });
+                holder.appendChild(add);
+
+                if (field.tip && !holder.querySelector('.tip')) {
+                    var tip = document.createElement('p');
+                    tip.className = 'tip';
+                    tip.textContent = field.tip;
+                    holder.appendChild(tip);
+                }
+            }
+
+            paint();
+            return holder;
+        }
+
+        // ───────────────────────────── 保存 / 预览 / 重置
+        function save() {
+            var btn = document.getElementById('save-btn');
+            btn.disabled = true;
+            api('/system/api/diy/save', {
+                method: 'POST',
+                body: { key: state.key, title: state.title || state.key, modules: state.modules }
+            }).then(function (data) {
+                state.dirty = false;
+                setStatus();
+                toast('已保存 ' + (data.count || state.modules.length) + ' 个区块');
+                if (el.mask.classList.contains('is-open')) {
+                    reloadPreview();
+                }
+            }).catch(function (err) {
+                toast(err.message, true);
+            }).then(function () {
+                btn.disabled = false;
+            });
+        }
+
+        function reloadPreview() {
+            var url = '/?__diy=' + Date.now();
+            el.frame.src = url;
+            el.previewUrl.textContent = 'http://' + location.host + '/';
+        }
+
+        function togglePreview(open) {
+            el.mask.classList.toggle('is-open', open);
+            if (open) {
+                reloadPreview();
+            }
+        }
+
+        function resetPage() {
+            if (!confirm('清空后前台会回退到模板默认内容，确定继续？')) {
+                return;
+            }
+            api('/system/api/diy/reset', { method: 'POST', body: { key: state.key } }).then(function () {
+                return loadPage(state.key);
+            }).then(function () {
+                toast('已清空');
+            }).catch(function (err) {
+                toast(err.message, true);
+            });
+        }
+
+        // ───────────────────────────── 事件
+        el.pageKey.addEventListener('change', function () {
+            if (state.dirty && !confirm('当前页面有未保存的修改，切换将丢失，继续？')) {
+                el.pageKey.value = state.key;
+                return;
+            }
+            loadPage(el.pageKey.value).catch(function (err) { toast(err.message, true); });
+        });
+
+        document.getElementById('save-btn').addEventListener('click', save);
+        document.getElementById('preview-btn').addEventListener('click', function () { togglePreview(true); });
+        document.getElementById('preview-close').addEventListener('click', function () { togglePreview(false); });
+        document.getElementById('preview-reload').addEventListener('click', reloadPreview);
+        document.getElementById('reset-btn').addEventListener('click', resetPage);
+
+        window.addEventListener('beforeunload', function (e) {
+            if (state.dirty) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        load().catch(function (err) {
+            setStatus('加载失败：' + err.message);
+            toast(err.message, true);
+        });
+    })();
+</script>
+</body>
+</html>

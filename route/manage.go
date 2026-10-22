@@ -469,6 +469,15 @@ func manageRoute(app *iris.Application) {
 				commission.Get("/detail", manageController.PluginCommissionDetail)
 			}
 
+			// 可视化装修
+			diy := manage.Party("/diy", middleware.ParseAdminToken, middleware.AdminPermission)
+			{
+				diy.Get("/types", manageController.PluginDiyTypes)
+				diy.Get("/page", manageController.PluginDiyPage)
+				diy.Post("/save", manageController.PluginDiySave)
+				diy.Post("/reset", manageController.PluginDiyReset)
+			}
+
 			// 认证管理（会员实名 / 企业认证）
 			userAuth := plugin.Party("/userauth")
 			{

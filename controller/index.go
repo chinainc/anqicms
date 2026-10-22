@@ -33,6 +33,9 @@ func IndexPage(ctx iris.Context) {
 		ctx.ViewData("webInfo", webInfo)
 	}
 
+	// 可视化装修：有配置时整页替换，没有则回退到模板默认内容
+	ctx.ViewData("diyHome", currentSite.RenderDiyPage("home"))
+
 	// 支持2种文件结构，一种是目录式的，一种是扁平式的
 	tplName, ok := currentSite.TemplateExist("index/index.html", "index.html")
 	if !ok {

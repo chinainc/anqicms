@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>认证管理 - 后台</title>
+    <style>
+        :root {
+            --pri: #1677ff;
+            --text: #1f2329;
+            --text2: #5c6b7a;
+            --text3: #86909c;
+            --line: #eef0f3;
+            --bg: #f5f7fa;
+            --ok: #12703b;
+            --ok-bg: #e8f7ee;
+            --warn: #a06a00;
+            --warn-bg: #fff8e6;
+            --err: #a8071a;
+            --err-bg: #fdecec;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 16px;
+            background: var(--bg);
+            color: var(--text);
+            font: 14px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 14px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, .04);
+        }
+
+        .head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .head h1 {
+            margin: 0;
+            font-size: 17px;
+            font-weight: 600;
+        }
+
+        .stats {
+            margin-left: auto;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            background: var(--bg);
+            color: var(--text2);
+        }
+
+        .stat b { font-size: 13px; color: var(--text); }
+        .stat.is-warn { background: var(--warn-bg); color: var(--warn); }
+        .stat.is-ok { background: var(--ok-bg); color: var(--ok); }
+        .stat.is-err { background: var(--err-bg); color: var(--err); }
+        .stat.is-warn b, .stat.is-ok b, .stat.is-err b { color: inherit; }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 14px;
+        }
+
+        .tabs { display: flex; gap: 6px; }
+
+        .tab {
+            height: 30px;
+            padding: 0 12px;
+            border: 1px solid var(--line);
+            border-radius: 15px;
+            background: #fff;
+            color: var(--text2);
+            font-size: 13px;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .tab:hover { border-color: var(--pri); color: var(--pri); }
+        .tab.is-active { border-color: var(--pri); background: #eaf3ff; color: var(--pri); }
+
+        .search { display: flex; gap: 8px; margin-left: auto; }
+
+        input[type=text] {
+            height: 30px;
+            padding: 0 10px;
+            border: 1px solid #dcdfe6;
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+            min-width: 200px;
+        }
+
+        input[type=text]:focus { border-color: var(--pri); box-shadow: 0 0 0 2px rgba(22, 119, 255, .1); }
+
+        .btn {
+            height: 30px;
+            padding: 0 12px;
+            border: 1px solid #dcdfe6;
+            border-radius: 6px;
+            background: #fff;
+            color: var(--text);
+            font-size: 13px;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .btn:hover { border-color: var(--pri); color: var(--pri); }
+        .btn-primary { background: var(--pri); border-color: var(--pri); color: #fff; }
+        .btn-primary:hover { background: #4096ff; color: #fff; }
+        .btn-ok { background: #1a9e59; border-color: #1a9e59; color: #fff; }
+        .btn-ok:hover { background: #28b96c; color: #fff; }
+        .btn-err { background: #e5484d; border-color: #e5484d; color: #fff; }
+        .btn-err:hover { background: #f2666b; color: #fff; }
+        .btn-sm { height: 26px; padding: 0 10px; font-size: 12px; }
+        .btn[disabled] { opacity: .5; cursor: not-allowed; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+
+        th, td {
+            padding: 10px 8px;
+            text-align: left;
+            font-size: 13px;
+            border-bottom: 1px solid var(--line);
+            vertical-align: middle;
+        }
+
+        th { color: var(--text3); font-weight: 500; background: #fafbfc; }
+
+        .badge {
+            display: inline-block;
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+
+        .badge.is-pending { background: var(--warn-bg); color: var(--warn); }
+        .badge.is-passed { background: var(--ok-bg); color: var(--ok); }
+        .badge.is-rejected { background: var(--err-bg); color: var(--err); }
+
+        .muted { color: var(--text3); font-size: 12px; }
+        .empty { padding: 40px 0; text-align: center; color: var(--text3); }
+
+        .pager { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; align-items: center; }
+        .pager span { color: var(--text3); font-size: 12px; }
+
+        /* 详情弹层 */
+        .mask {
+            position: fixed;
+            inset: 0;
+            z-index: 20;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 32, .45);
+            padding: 24px;
+        }
+
+        .mask.is-open { display: flex; }
+
+        .modal {
+            width: min(720px, 100%);
+            max-height: 100%;
+            overflow: auto;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 18px 48px rgba(0, 0, 0, .22);
+        }
+
+        .modal__head {
+            display: flex;
+            align-items: center;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .modal__head h3 { margin: 0; font-size: 15px; font-weight: 600; }
+        .modal__head button {
+            margin-left: auto;
+            border: 0;
+            background: transparent;
+            font-size: 20px;
+            line-height: 1;
+            color: var(--text3);
+            cursor: pointer;
+        }
+
+        .modal__body { padding: 14px 18px; }
+
+        .kv { display: grid; grid-template-columns: 110px 1fr; gap: 8px 12px; font-size: 13px; }
+        .kv dt { color: var(--text3); }
+        .kv dd { margin: 0; word-break: break-all; }
+
+        .shots { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+        .shots a { display: block; }
+        .shots img {
+            width: 190px;
+            height: 120px;
+            object-fit: cover;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+        }
+
+        .audit-box { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+        .audit-box textarea {
+            width: 100%;
+            min-height: 60px;
+            padding: 8px 10px;
+            border: 1px solid #dcdfe6;
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: inherit;
+            outline: none;
+            resize: vertical;
+        }
+        .audit-box textarea:focus { border-color: var(--pri); }
+        .audit-actions { display: flex; gap: 8px; margin-top: 10px; justify-content: flex-end; }
+
+        .tip {
+            margin: 0 0 12px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            background: var(--warn-bg);
+            color: var(--warn);
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="head">
+        <h1>认证管理</h1>
+        <div class="stats">
+            <span class="stat is-warn">待审核 <b id="st-pending">0</b></span>
+            <span class="stat is-ok">已通过 <b id="st-passed">0</b></span>
+            <span class="stat is-err">已驳回 <b id="st-rejected">0</b></span>
+        </div>
+    </div>
+    <div class="toolbar">
+        <div class="tabs">
+            <button type="button" class="tab is-active" data-status="all">全部</button>
+            <button type="button" class="tab" data-status="0">待审核</button>
+            <button type="button" class="tab" data-status="1">已通过</button>
+            <button type="button" class="tab" data-status="-1">已驳回</button>
+        </div>
+        <div class="search">
+            <input type="text" id="keyword" placeholder="搜索会员、姓名、证件号或企业名称">
+            <button type="button" class="btn" id="search-btn">搜索</button>
+            <button type="button" class="btn" id="refresh-btn">刷新</button>
+        </div>
+    </div>
+    <div id="list-box"></div>
+    <div class="pager">
+        <span id="page-info"></span>
+        <button type="button" class="btn btn-sm" id="prev-btn">上一页</button>
+        <button type="button" class="btn btn-sm" id="next-btn">下一页</button>
+    </div>
+</div>
+
+<div class="mask" id="mask">
+    <div class="modal">
+        <div class="modal__head">
+            <h3>认证详情</h3>
+            <button type="button" id="close-btn">&times;</button>
+        </div>
+        <div class="modal__body" id="modal-body"></div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        var state = { status: 'all', keyword: '', page: 1, pageSize: 20, total: 0, current: null };
+        var listBox = document.getElementById('list-box');
+        var pageInfo = document.getElementById('page-info');
+        var mask = document.getElementById('mask');
+        var modalBody = document.getElementById('modal-body');
+
+        function esc(value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        function api(url, options) {
+            options = options || {};
+            options.credentials = 'same-origin';
+            if (options.body && typeof options.body !== 'string') {
+                options.headers = { 'Content-Type': 'application/json' };
+                options.body = JSON.stringify(options.body);
+            }
+            return fetch(url, options).then(function (res) {
+                return res.json();
+            }).then(function (data) {
+                if (data && data.code === 0) {
+                    return data.data || {};
+                }
+                throw new Error((data && data.msg) || '请求失败');
+            });
+        }
+
+        function statusBadge(status) {
+            if (status === 1) { return '<span class="badge is-passed">已通过</span>'; }
+            if (status === -1) { return '<span class="badge is-rejected">已驳回</span>'; }
+            return '<span class="badge is-pending">待审核</span>';
+        }
+
+        function typeText(type) {
+            return type === 2 ? '企业认证' : '个人实名';
+        }
+
+        function subject(item) {
+            return item.type === 2 ? (item.company_name || '-') : (item.real_name || '-');
+        }
+
+        function serial(item) {
+            return item.type === 2 ? (item.company_no || '-') : (item.id_card || '-');
+        }
+
+        function timeText(stamp) {
+            if (!stamp) { return '-'; }
+            var d = new Date(stamp * 1000);
+            var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+            return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        }
+
+        function renderList(data) {
+            document.getElementById('st-pending').textContent = data.pending || 0;
+            document.getElementById('st-passed').textContent = data.passed || 0;
+            document.getElementById('st-rejected').textContent = data.rejected || 0;
+
+            state.total = data.total || 0;
+            var list = data.list || [];
+            if (!list.length) {
+                listBox.innerHTML = '<div class="empty">没有符合条件的认证记录</div>';
+            } else {
+                var rows = list.map(function (item) {
+                    var actions = '<button type="button" class="btn btn-sm" data-act="detail" data-id="' + item.id + '">详情</button>';
+                    if (item.status !== 1) {
+                        actions += ' <button type="button" class="btn btn-sm btn-ok" data-act="pass" data-id="' + item.id + '">通过</button>';
+                    }
+                    if (item.status !== -1) {
+                        actions += ' <button type="button" class="btn btn-sm btn-err" data-act="reject" data-id="' + item.id + '">驳回</button>';
+                    }
+                    return '<tr>' +
+                        '<td>' + esc(item.user_name || ('#' + item.user_id)) + '<div class="muted">ID ' + item.user_id + '</div></td>' +
+                        '<td>' + typeText(item.type) + '</td>' +
+                        '<td>' + esc(subject(item)) + '</td>' +
+                        '<td>' + esc(serial(item)) + '</td>' +
+                        '<td>' + timeText(item.created_time) + '</td>' +
+                        '<td>' + statusBadge(item.status) + '</td>' +
+                        '<td>' + actions + '</td>' +
+                        '</tr>';
+                }).join('');
+                listBox.innerHTML = '<table><thead><tr><th>会员</th><th>类型</th><th>姓名 / 企业</th><th>证件号 / 信用代码</th><th>提交时间</th><th>状态</th><th>操作</th></tr></thead><tbody>' + rows + '</tbody></table>';
+            }
+
+            var totalPage = Math.max(1, Math.ceil(state.total / state.pageSize));
+            pageInfo.textContent = '共 ' + state.total + ' 条，第 ' + state.page + '/' + totalPage + ' 页';
+        }
+
+        function load() {
+            var url = '/system/api/plugin/userauth/list?status=' + state.status +
+                '&page=' + state.page + '&pageSize=' + state.pageSize +
+                '&keyword=' + encodeURIComponent(state.keyword);
+            return api(url).then(renderList).catch(function (err) {
+                listBox.innerHTML = '<div class="empty">' + esc(err.message) + '<br><a href="/system">先去后台登录</a></div>';
+            });
+        }
+
+        function showDetail(id) {
+            api('/system/api/plugin/userauth/detail?id=' + id).then(function (item) {
+                state.current = item;
+                renderDetail(item);
+                mask.classList.add('is-open');
+            }).catch(function (err) {
+                alert(err.message);
+            });
+        }
+
+        function renderDetail(item) {
+            var rows = [
+                ['会员', (item.user_name || '') + ' (ID ' + item.user_id + ')'],
+                ['认证类型', typeText(item.type)]
+            ];
+            if (item.type === 2) {
+                rows.push(['企业名称', item.company_name]);
+                rows.push(['信用代码', item.company_no]);
+                rows.push(['法定代表人', item.company_legal]);
+            } else {
+                rows.push(['真实姓名', item.real_name]);
+                rows.push(['身份证号', item.id_card]);
+            }
+            rows.push(['联系手机', item.phone || '-']);
+            rows.push(['提交时间', timeText(item.created_time)]);
+            rows.push(['当前状态', statusBadge(item.status)]);
+            if (item.audit_time) {
+                rows.push(['审核时间', timeText(item.audit_time)]);
+            }
+            if (item.remark) {
+                rows.push(['审核备注', item.remark]);
+            }
+
+            var html = '<dl class="kv">' + rows.map(function (row) {
+                return '<dt>' + esc(row[0]) + '</dt><dd>' + (row[0] === '当前状态' ? row[1] : esc(row[1])) + '</dd>';
+            }).join('') + '</dl>';
+
+            var shots = [];
+            if (item.id_card_front) { shots.push(item.id_card_front); }
+            if (item.id_card_back) { shots.push(item.id_card_back); }
+            if (item.id_card_hand) { shots.push(item.id_card_hand); }
+            if (item.company_licence) { shots.push(item.company_licence); }
+            if (shots.length) {
+                html += '<div class="shots">' + shots.map(function (src) {
+                    return '<a href="' + esc(src) + '" target="_blank"><img src="' + esc(src) + '" alt=""></a>';
+                }).join('') + '</div>';
+            }
+
+            if (item.status !== 1) {
+                html += '<div class="audit-box">' +
+                    '<textarea id="audit-remark" placeholder="审核备注（驳回时必须填写原因）"></textarea>' +
+                    '<div class="audit-actions">' +
+                    '<button type="button" class="btn btn-err" data-act="reject" data-id="' + item.id + '">驳回</button>' +
+                    '<button type="button" class="btn btn-ok" data-act="pass" data-id="' + item.id + '">审核通过</button>' +
+                    '</div></div>';
+            }
+
+            modalBody.innerHTML = html;
+        }
+
+        function audit(id, status, remark) {
+            return api('/system/api/plugin/userauth/audit', {
+                method: 'POST',
+                body: { id: id, status: status, remark: remark || '' }
+            });
+        }
+
+        function quickAudit(id, status, remark) {
+            remark = (remark || '').trim();
+            if (status === -1 && !remark) {
+                remark = window.prompt('请填写驳回原因（会展示给会员）') || '';
+                if (!remark.trim()) {
+                    alert('驳回原因不能为空');
+                    return;
+                }
+            }
+            audit(id, status, remark).then(function () {
+                mask.classList.remove('is-open');
+                load();
+            }).catch(function (err) {
+                alert(err.message);
+            });
+        }
+
+        document.querySelectorAll('.tab[data-status]:not([hidden])').forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('is-active'); });
+                tab.classList.add('is-active');
+                state.status = tab.getAttribute('data-status');
+                state.page = 1;
+                load();
+            });
+        });
+
+        document.getElementById('search-btn').addEventListener('click', function () {
+            state.keyword = document.getElementById('keyword').value.trim();
+            state.page = 1;
+            load();
+        });
+
+        document.getElementById('keyword').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                document.getElementById('search-btn').click();
+            }
+        });
+
+        document.getElementById('refresh-btn').addEventListener('click', load);
+
+        document.getElementById('prev-btn').addEventListener('click', function () {
+            if (state.page > 1) {
+                state.page--;
+                load();
+            }
+        });
+
+        document.getElementById('next-btn').addEventListener('click', function () {
+            if (state.page * state.pageSize < state.total) {
+                state.page++;
+                load();
+            }
+        });
+
+        document.getElementById('close-btn').addEventListener('click', function () {
+            mask.classList.remove('is-open');
+        });
+
+        mask.addEventListener('click', function (e) {
+            if (e.target === mask) {
+                mask.classList.remove('is-open');
+            }
+        });
+
+        document.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-act]');
+            if (!btn) {
+                return;
+            }
+            var act = btn.getAttribute('data-act');
+            var id = parseInt(btn.getAttribute('data-id'), 10);
+            if (act === 'detail') {
+                showDetail(id);
+                return;
+            }
+            if (act === 'pass' || act === 'reject') {
+                var area = document.getElementById('audit-remark');
+                quickAudit(id, act === 'pass' ? 1 : -1, area ? area.value : '');
+            }
+        });
+
+        load();
+    })();
+</script>
+</body>
+</html>

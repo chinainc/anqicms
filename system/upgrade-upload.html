@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线升级 - 上传升级包</title>
+    <style>
+        :root {
+            --pri: #1677ff;
+            --text: #1f2329;
+            --text2: #5c6b7a;
+            --line: #e5e6eb;
+            --bg: #f5f7fa;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 16px;
+            background: var(--bg);
+            color: var(--text);
+            font: 14px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, .04);
+            margin-bottom: 16px;
+        }
+
+        h1 { font-size: 18px; margin: 0 0 4px; }
+        .crumb { color: #86909c; font-size: 13px; margin-bottom: 16px; }
+        .crumb b { color: var(--text); font-weight: 500; }
+
+        .env {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 4px;
+        }
+
+        .env-item {
+            padding: 12px 14px;
+            background: #f7f9fb;
+            border-radius: 6px;
+        }
+
+        .env-item dt { color: #86909c; font-size: 12px; margin-bottom: 4px; }
+        .env-item dd { margin: 0; font-size: 16px; font-weight: 600; }
+
+        .hint { color: #86909c; font-size: 13px; margin: 12px 0 0; }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 3px;
+            height: 14px;
+            background: var(--pri);
+            border-radius: 2px;
+        }
+
+        .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+        .row label { color: var(--text2); }
+
+        input[type=text] {
+            height: 32px;
+            padding: 0 10px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+            width: 220px;
+        }
+
+        input[type=text]:focus { border-color: var(--pri); box-shadow: 0 0 0 3px rgba(22, 119, 255, .1); }
+
+        .btn {
+            height: 32px;
+            padding: 0 14px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: #fff;
+            color: var(--text);
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .btn:hover { border-color: var(--pri); color: var(--pri); }
+
+        .btn-primary {
+            background: var(--pri);
+            border-color: var(--pri);
+            color: #fff;
+        }
+
+        .btn-primary:hover { background: #0e63e0; color: #fff; }
+
+        .btn[disabled] { opacity: .55; cursor: not-allowed; }
+
+        .file-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .file-name { color: var(--text2); font-size: 13px; }
+
+        .progress {
+            height: 8px;
+            border-radius: 4px;
+            background: #eef1f5;
+            overflow: hidden;
+            margin: 8px 0 4px;
+            display: none;
+        }
+
+        .progress.is-show { display: block; }
+
+        .progress__bar {
+            height: 100%;
+            width: 0;
+            background: var(--pri);
+            transition: width .2s;
+        }
+
+        .result {
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            display: none;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .result.is-show { display: block; }
+        .result.is-ok { background: #e8f7ee; color: #12703b; border: 1px solid #b7e4c7; }
+        .result.is-err { background: #fdecec; color: #a8071a; border: 1px solid #ffc9c9; }
+
+        .tip-list { margin: 8px 0 0; padding-left: 18px; color: #86909c; font-size: 13px; }
+        .tip-list li { margin-bottom: 2px; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>在线升级</h1>
+    <div class="crumb">升级 &rsaquo; <b>上传升级包</b></div>
+    <div class="env">
+        <div class="env-item">
+            <dt>当前版本</dt>
+            <dd id="env-version">-</dd>
+        </div>
+        <div class="env-item">
+            <dt>运行平台</dt>
+            <dd id="env-os">-</dd>
+        </div>
+        <div class="env-item">
+            <dt>主程序</dt>
+            <dd id="env-exec">-</dd>
+        </div>
+    </div>
+    <p class="hint">升级由服务端完成：解压覆盖程序文件、替换主程序，重启服务后生效。支持 Windows 与 Linux。</p>
+</div>
+
+<div class="card">
+    <div class="section-title">上传升级包</div>
+    <p class="hint" style="margin-top:0">把发版脚本打出的升级包（<b>.zip</b> 或 <b>.tar.gz</b>）直接上传到服务器升级，服务器不需要访问外网。</p>
+
+    <div class="row file-box">
+        <button type="button" class="btn" id="pick">选择文件</button>
+        <span class="file-name" id="file-name">未选择文件</span>
+        <button type="button" class="btn btn-primary" id="upload" disabled>上传并升级</button>
+        <label style="display:flex;align-items:center;gap:6px;color:var(--text2)">
+            <input type="checkbox" id="force"> 强制升级（即使版本号相同）
+        </label>
+        <input type="file" id="file" accept=".zip,.gz,.tar.gz" hidden>
+    </div>
+
+    <div class="row">
+        <label>版本号</label>
+        <input type="text" id="version" placeholder="包内有 version.json 时自动读取">
+        <span class="hint" style="margin:0">留空则使用包内 version.json 的版本号</span>
+    </div>
+
+    <div class="progress" id="progress">
+        <div class="progress__bar" id="progress-bar"></div>
+    </div>
+    <div class="result" id="result"></div>
+
+    <ul class="tip-list">
+        <li>升级包上限 512 MB；解压后总量上限 2 GB。</li>
+        <li>不会覆盖：template/、public/、data/、uploads/、logs/、config.json、*.sh、*.bat。</li>
+        <li>升级完成后需要重启服务，重启期间站点会有几秒钟不可用。</li>
+    </ul>
+</div>
+
+<script>
+    (function () {
+        var fileInput = document.getElementById('file');
+        var fileName = document.getElementById('file-name');
+        var pickBtn = document.getElementById('pick');
+        var uploadBtn = document.getElementById('upload');
+        var forceBox = document.getElementById('force');
+        var versionInput = document.getElementById('version');
+        var progress = document.getElementById('progress');
+        var progressBar = document.getElementById('progress-bar');
+        var resultBox = document.getElementById('result');
+
+        function showResult(ok, message, withRestart) {
+            resultBox.className = 'result is-show ' + (ok ? 'is-ok' : 'is-err');
+            resultBox.textContent = message;
+            if (withRestart) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-primary';
+                btn.style.marginTop = '8px';
+                btn.textContent = '立即重启服务';
+                btn.addEventListener('click', function () {
+                    btn.disabled = true;
+                    btn.textContent = '正在重启...';
+                    fetch('/system/api/anqi/restart', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: '{}'
+                    }).then(function () {
+                        btn.textContent = '已发送重启指令，5 秒后刷新';
+                        setTimeout(function () { location.reload(); }, 5000);
+                    }).catch(function () {
+                        btn.disabled = false;
+                        btn.textContent = '重启失败，请手动重启';
+                    });
+                });
+                resultBox.appendChild(document.createElement('br'));
+                resultBox.appendChild(btn);
+            }
+        }
+
+        function formatSize(size) {
+            if (size > 1024 * 1024) {
+                return (size / 1024 / 1024).toFixed(1) + ' MB';
+            }
+            return (size / 1024).toFixed(0) + ' KB';
+        }
+
+        fetch('/system/api/version/env', { credentials: 'same-origin' })
+            .then(function (res) { return res.json(); })
+            .then(function (res) {
+                var data = (res && res.data) || {};
+                document.getElementById('env-version').textContent = data.version || '-';
+                document.getElementById('env-os').textContent = (data.goos || '-') + ' / ' + (data.goarch || '-');
+                document.getElementById('env-exec').textContent = data.exec || '-';
+                if (data.max_size) {
+                    uploadBtn.title = '单个升级包上限 ' + (data.max_size / 1024 / 1024) + ' MB';
+                }
+            })
+            .catch(function () {
+                document.getElementById('env-version').textContent = '读取失败（请重新登录后台）';
+            });
+
+        pickBtn.addEventListener('click', function () {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', function () {
+            if (fileInput.files && fileInput.files[0]) {
+                fileName.textContent = fileInput.files[0].name + '（' + formatSize(fileInput.files[0].size) + '）';
+                uploadBtn.disabled = false;
+            } else {
+                fileName.textContent = '未选择文件';
+                uploadBtn.disabled = true;
+            }
+        });
+
+        uploadBtn.addEventListener('click', function () {
+            if (!fileInput.files || !fileInput.files[0]) {
+                return;
+            }
+            var file = fileInput.files[0];
+            if (file.size > 512 * 1024 * 1024) {
+                showResult(false, '升级包超过 512 MB，请拆分或使用完整包重新部署。');
+                return;
+            }
+            if (!window.confirm('确定使用「' + file.name + '」升级？升级会覆盖程序文件。')) {
+                return;
+            }
+
+            var form = new FormData();
+            form.append('file', file);
+            if (versionInput.value.trim() !== '') {
+                form.append('version', versionInput.value.trim());
+            }
+            if (forceBox.checked) {
+                form.append('force', '1');
+            }
+
+            uploadBtn.disabled = true;
+            pickBtn.disabled = true;
+            progress.className = 'progress is-show';
+            progressBar.style.width = '0%';
+            resultBox.className = 'result';
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/system/api/version/upload-upgrade', true);
+            xhr.withCredentials = true;
+            xhr.upload.onprogress = function (e) {
+                if (e.lengthComputable) {
+                    var percent = Math.floor(e.loaded / e.total * 100);
+                    progressBar.style.width = percent + '%';
+                    uploadBtn.textContent = '上传中 ' + percent + '%';
+                }
+            };
+            xhr.onload = function () {
+                var res = {};
+                try {
+                    res = JSON.parse(xhr.responseText);
+                } catch (e) {
+                    res = { code: -1, msg: '服务端返回异常：' + xhr.responseText.substring(0, 200) };
+                }
+                progress.className = 'progress';
+                uploadBtn.textContent = '上传并升级';
+                uploadBtn.disabled = false;
+                pickBtn.disabled = false;
+                if (res.code === 0) {
+                    showResult(true, res.msg || '升级完成', true);
+                    versionInput.value = '';
+                    fileInput.value = '';
+                    fileName.textContent = '未选择文件';
+                } else {
+                    showResult(false, res.msg || '升级失败');
+                }
+            };
+            xhr.onerror = function () {
+                progress.className = 'progress';
+                uploadBtn.textContent = '上传并升级';
+                uploadBtn.disabled = false;
+                pickBtn.disabled = false;
+                showResult(false, '上传失败，请检查网络或升级包大小是否超限');
+            };
+            xhr.send(form);
+        });
+    })();
+</script>
+</body>
+</html>

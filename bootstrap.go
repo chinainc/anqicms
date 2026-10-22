@@ -136,6 +136,7 @@ func (bootstrap *Bootstrap) Start() {
 	_ = pugEngine.RegisterTag("categoryList", tags.TagCategoryListParser)
 	_ = pugEngine.RegisterTag("categoryDetail", tags.TagCategoryDetailParser)
 	_ = pugEngine.RegisterTag("moduleList", tags.TagModuleListParser)
+	_ = pugEngine.RegisterTag("diyPage", tags.TagDiyPageParser)
 	_ = pugEngine.RegisterTag("archiveDetail", tags.TagArchiveDetailParser)
 	_ = pugEngine.RegisterTag("pageList", tags.TagPageListParser)
 	_ = pugEngine.RegisterTag("pageDetail", tags.TagPageDetailParser)

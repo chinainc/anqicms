@@ -28,7 +28,8 @@ import (
 // adminInjectScriptTag 注入到后台 SPA 外壳里的自定义脚本。
 // 后台前端是打包产物，无法直接改源码，所以统一在服务端输出 html 外壳时注入。
 const adminInjectScriptTag = `<script src="/system/upgrade-upload-entry.js?v=20261022163000" defer></script>` +
-	`<script src="/system/user-auth-entry.js?v=20261022150000" defer></script>`
+	`<script src="/system/user-auth-entry.js?v=20261022150000" defer></script>` +
+	`<script src="/system/diy-entry.js?v=20261022170000" defer></script>`
 
 // serveAdminHTML 输出后台 SPA 的 html 外壳，并在 </body> 前注入自定义脚本。
 // 后台每个路由目录下都有一份 index.html 外壳，逐个改文件既容易漏、又会被下一次前端构建覆盖，

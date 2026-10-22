@@ -1,0 +1,158 @@
+{% extends 'member/layout.html' %}
+
+{% block member_title %}{% tr 'AccountOverview' %}{% endblock %}
+
+{% block member %}
+<div class="member-panel member-hello">
+    <div class="member-hello__text">
+        <h2>{% tr 'WelcomeBack' %}，{{ userInfo.UserName }}</h2>
+        <p>
+            {% if userGroup.Title %}{{ userGroup.Title }}{% endif %}
+            <span class="member-dot">·</span>{% tr 'RegisterTime' %}：{{ userInfo.CreatedTime|dateFormat:"2006-01-02" }}
+            {% if userInfo.LastLogin %}
+            <span class="member-dot">·</span>{% tr 'LastLoginTime' %}：{{ userInfo.LastLogin|dateFormat:"2006-01-02 15:04" }}
+            {% endif %}
+        </p>
+    </div>
+    <a class="member-btn member-btn--ghost" href="/member/profile">{% tr 'MyProfile' %}</a>
+</div>
+
+<div class="member-stats">
+    <div class="member-stat">
+        <div class="member-stat__icon"><i class="fa fa-cny"></i></div>
+        <div class="member-stat__body">
+            <div class="member-stat__label">{% tr 'Balance' %}</div>
+            <div class="member-stat__value">{% if userInfo.Balance > 0 %}{{ userInfo.Balance|priceFormat }}{% else %}0.00{% endif %}</div>
+        </div>
+    </div>
+    <div class="member-stat">
+        <div class="member-stat__icon"><i class="fa fa-gift"></i></div>
+        <div class="member-stat__body">
+            <div class="member-stat__label">{% tr 'TotalReward' %}</div>
+            <div class="member-stat__value">{% if userInfo.TotalReward > 0 %}{{ userInfo.TotalReward|priceFormat }}{% else %}0.00{% endif %}</div>
+        </div>
+    </div>
+    <div class="member-stat">
+        <div class="member-stat__icon"><i class="fa fa-star-o"></i></div>
+        <div class="member-stat__body">
+            <div class="member-stat__label">{% tr 'FavoritesCount' %}</div>
+            <div class="member-stat__value">{{ favoriteCount }}</div>
+        </div>
+    </div>
+    <div class="member-stat">
+        <div class="member-stat__icon"><i class="fa fa-list-alt"></i></div>
+        <div class="member-stat__body">
+            <div class="member-stat__label">{% tr 'OrdersCount' %}</div>
+            <div class="member-stat__value">{{ orderCount }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'QuickActions' %}</h3>
+    </div>
+    <div class="member-actions">
+        <a class="member-action" href="/member/profile">
+            <i class="fa fa-user-o"></i>
+            <span>{% tr 'MyProfile' %}</span>
+        </a>
+        <a class="member-action" href="/member/password">
+            <i class="fa fa-lock"></i>
+            <span>{% tr 'ChangePassword' %}</span>
+        </a>
+        <a class="member-action" href="/member/favorites">
+            <i class="fa fa-star-o"></i>
+            <span>{% tr 'MyFavorites' %}</span>
+        </a>
+        <a class="member-action" href="/member/orders">
+            <i class="fa fa-list-alt"></i>
+            <span>{% tr 'MyOrders' %}</span>
+        </a>
+    </div>
+</div>
+
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'AccountSecurity' %}</h3>
+    </div>
+    <ul class="member-safe">
+        <li>
+            <i class="fa {% if userInfo.Email and userInfo.EmailVerified %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i>
+            <span>{% tr 'EmailAddress' %}</span>
+            <em>
+                {% if userInfo.Email %}
+                    {% if userInfo.EmailVerified %}{% tr 'EmailBound' %}{% else %}{% tr 'EmailUnbound' %}{% endif %}
+                {% else %}{% tr 'EmailUnbound' %}{% endif %}
+            </em>
+        </li>
+        <li>
+            <i class="fa {% if userInfo.Phone %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i>
+            <span>{% tr 'MobilePhone' %}</span>
+            <em>{% if userInfo.Phone %}{% tr 'PhoneBound' %}{% else %}{% tr 'PhoneUnbound' %}{% endif %}</em>
+        </li>
+        <li>
+            <i class="fa fa-check-circle"></i>
+            <span>{% tr 'Password' %}</span>
+            <em><a href="/member/password">{% tr 'ChangePassword' %}</a></em>
+        </li>
+    </ul>
+</div>
+
+<div class="member-col-2">
+    <div class="member-panel">
+        <div class="member-panel__head">
+            <h3>{% tr 'MyFavorites' %}</h3>
+            <a class="member-panel__more" href="/member/favorites">{% tr 'ViewAll' %}</a>
+        </div>
+        {% if recentFavorites %}
+        <ul class="member-mini-list">
+            {% for item in recentFavorites %}
+            <li class="member-mini-item">
+                <a class="member-mini-item__thumb" href="{{ item.Link }}">
+                    {% if item.Thumb %}<img src="{{ item.Thumb }}" alt="{{ item.Title }}">{% else %}<i class="fa fa-file-text-o"></i>{% endif %}
+                </a>
+                <div class="member-mini-item__body">
+                    <a class="member-mini-item__title" href="{{ item.Link }}">{{ item.Title }}</a>
+                    <span class="member-mini-item__meta">{{ item.CreatedTime|dateFormat:"2006-01-02" }}</span>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="member-empty">
+            <i class="fa fa-star-o"></i>
+            <p>{% tr 'NoFavorites' %}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="member-panel">
+        <div class="member-panel__head">
+            <h3>{% tr 'MyOrders' %}</h3>
+            <a class="member-panel__more" href="/member/orders">{% tr 'ViewAll' %}</a>
+        </div>
+        {% if recentOrders %}
+        <ul class="member-mini-list">
+            {% for item in recentOrders %}
+            <li class="member-mini-item">
+                <div class="member-mini-item__body">
+                    <a class="member-mini-item__title" href="/member/orders">{{ item.OrderId }}</a>
+                    <span class="member-mini-item__meta">
+                        {% if item.Amount > 0 %}¥{{ item.Amount|priceFormat }}{% else %}¥0.00{% endif %}
+                        <span class="member-dot">·</span>{{ item.CreatedTime|dateFormat:"2006-01-02" }}
+                    </span>
+                </div>
+                <span class="member-badge member-badge--{{ item.StatusClass }}">{{ item.StatusText }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="member-empty">
+            <i class="fa fa-list-alt"></i>
+            <p>{% tr 'NoOrders' %}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

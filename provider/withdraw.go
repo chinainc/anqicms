@@ -55,6 +55,11 @@ func (w *Website) SetUserWithdrawApproval(req *request.UserWithdrawApprovalReque
 	withdraw.Status = config.WithdrawStatusAgree
 	w.DB.Save(withdraw)
 
+	// 余额提现在申请时就已经扣款并记了流水，这里不能重复记账
+	if w.markBalanceWithdrawDone(withdraw) {
+		return nil
+	}
+
 	//生成用户支付记录
 	var userBalance int64
 	err = w.DB.Model(&model.User{}).Where("`id` = ?", withdraw.UserId).Pluck("balance", &userBalance).Error
@@ -76,6 +81,23 @@ func (w *Website) SetUserWithdrawApproval(req *request.UserWithdrawApprovalReque
 	return nil
 }
 
+// markBalanceWithdrawDone 余额提现申请时已写入 OrderId = W<id> 的流水，
+// 审核通过/打款完成时只把这条流水标记为已完成；返回 true 表示已处理，调用方不要再记账。
+func (w *Website) markBalanceWithdrawDone(withdraw *model.UserWithdraw) bool {
+	if withdraw == nil {
+		return false
+	}
+	orderId := fmt.Sprintf("W%d", withdraw.Id)
+	var finance model.Finance
+	if err := w.DB.Where("`order_id` = ? AND `user_id` = ?", orderId, withdraw.UserId).Take(&finance).Error; err != nil {
+		return false
+	}
+	if finance.Status != 1 {
+		w.DB.Model(&model.Finance{}).Where("`id` = ?", finance.Id).UpdateColumn("status", 1)
+	}
+	return true
+}
+
 func (w *Website) SetUserWithdrawFinished(req *request.UserWithdrawApprovalRequest) error {
 	withdraw, err := w.GetWithdrawById(req.Id)
 	if err != nil {
@@ -86,6 +108,11 @@ func (w *Website) SetUserWithdrawFinished(req *request.UserWithdrawApprovalReque
 	withdraw.Status = config.WithdrawStatusFinished
 	withdraw.SuccessTime = time.Now().Unix()
 	w.DB.Save(withdraw)
+
+	// 余额提现在申请时就已经扣款并记了流水，这里不能重复记账
+	if w.markBalanceWithdrawDone(withdraw) {
+		return nil
+	}
 
 	//生成用户支付记录
 	var userBalance int64

@@ -1,0 +1,80 @@
+{# 全站搜索框：模型下拉 + 关键词 + 搜索按钮 + 热门搜索 #}
+{% moduleList searchModules %}
+<div class="search-band">
+    <div class="container">
+        <form class="search-form" id="search-form" method="get" action="{{ searchModules.SearchLink|default:'/search' }}">
+            <div class="search-form__type">
+                <select id="search-module" aria-label="{% tr 'All' %}">
+                    <option value="{{ searchModules.SearchLink|default:'/search' }}">{% tr 'All' %}</option>
+                    {% for item in searchModules.List %}
+                    <option value="{{ item.SearchLink }}">{{ item.Title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <input type="text" name="q" id="search-q" class="search-form__input"
+                   placeholder="{% tr 'SearchPlaceholder' %}"
+                   value="{{ urlParams.q }}" autocomplete="off">
+            <button type="submit" class="search-form__btn">{% tr 'SearchButton' %}</button>
+        </form>
+
+        {% archiveList hotWords with type="list" order="views desc" limit="6" %}
+        {% if hotWords %}
+        <div class="search-hot">
+            <span>{% tr 'hot-search:' %}</span>
+            {% for item in hotWords %}
+            <a href="{{ searchModules.SearchLink|default:'/search' }}?q={{ item.Title|urlencode }}">{{ item.Title }}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endarchiveList %}
+    </div>
+</div>
+{% endmoduleList %}
+
+<script>
+    (function () {
+        var form = document.getElementById('search-form');
+        if (!form) {
+            return;
+        }
+        var select = document.getElementById('search-module');
+        var input = document.getElementById('search-q');
+
+        form.addEventListener('submit', function (e) {
+            var q = (input.value || '').trim();
+            if (!q) {
+                e.preventDefault();
+                input.focus();
+                return;
+            }
+            // 选了具体模型就用模型对应的搜索地址，否则用全部
+            var action = (select && select.value) ? select.value : form.getAttribute('action');
+            e.preventDefault();
+            var joiner = action.indexOf('?') >= 0 ? '&' : '?';
+            window.location.href = action + joiner + 'q=' + encodeURIComponent(q);
+        });
+
+        // 搜索页进入时把当前模型回填到下拉（取匹配到的最长路径，避免被「全部」抢走）
+        if (select) {
+            var current = window.location.pathname;
+            var bestIndex = 0;
+            var bestLen = 0;
+            for (var i = 0; i < select.options.length; i++) {
+                var val = select.options[i].value;
+                if (!val) {
+                    continue;
+                }
+                try {
+                    var path = new URL(val, window.location.origin).pathname.replace(/\/+$/, '');
+                    if (path && current.indexOf(path) === 0 && path.length > bestLen) {
+                        bestIndex = i;
+                        bestLen = path.length;
+                    }
+                } catch (err) {
+                    // 忽略非法 URL
+                }
+            }
+            select.selectedIndex = bestIndex;
+        }
+    })();
+</script>

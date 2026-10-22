@@ -27,3 +27,7 @@ keyword.json
 
 # apilive 冒烟工具的本地编译产物（go build ./cmd/apilive）
 /apilive
+
+# 本地运行产物：主程序二进制、调试脚本与截图
+/anqicms.exe
+/tmp/

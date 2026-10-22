@@ -1,0 +1,221 @@
+{% extends 'member/layout.html' %}
+
+{% block member_title %}{% tr 'MyCart' %}{% endblock %}
+
+{% block member %}
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'MyCart' %}<span class="member-panel__count" id="cart-count">{{ cartCount }}</span></h3>
+        {% if carts %}
+        <a href="javascript:;" class="member-panel__more js-cart-clear">{% tr 'ClearCart' %}</a>
+        {% endif %}
+    </div>
+
+    {% if carts %}
+    <div class="member-cart">
+        <div class="member-cart__head">
+            <span class="member-cart__col-goods">{% tr 'Goods' %}</span>
+            <span class="member-cart__col-price">{% tr 'UnitPrice' %}</span>
+            <span class="member-cart__col-qty">{% tr 'Quantity' %}</span>
+            <span class="member-cart__col-amount">{% tr 'Subtotal' %}</span>
+            <span class="member-cart__col-op"></span>
+        </div>
+        {% for item in carts %}
+        <div class="member-cart__row" data-cart="{{ item.Id }}" data-price="{{ item.Archive.Price }}">
+            <div class="member-cart__col-goods">
+                <a class="member-cart__thumb" href="{{ item.Link }}">
+                    {% if item.Thumb %}<img src="{{ item.Thumb }}" alt="{{ item.Archive.Title }}">{% else %}<i class="fa fa-cube"></i>{% endif %}
+                </a>
+                <a class="member-cart__title" href="{{ item.Link }}">{{ item.Archive.Title }}</a>
+            </div>
+            <div class="member-cart__col-price">¥{% if item.Archive.Price > 0 %}{{ item.Archive.Price|priceFormat }}{% else %}0.00{% endif %}</div>
+            <div class="member-cart__col-qty">
+                <div class="member-qty">
+                    <button type="button" class="js-qty-minus">-</button>
+                    <input type="text" class="js-qty-input" value="{{ item.Quantity }}" inputmode="numeric">
+                    <button type="button" class="js-qty-plus">+</button>
+                </div>
+            </div>
+            <div class="member-cart__col-amount">¥<span class="js-row-amount">{% if item.Amount > 0 %}{{ item.Amount|priceFormat }}{% else %}0.00{% endif %}</span></div>
+            <div class="member-cart__col-op">
+                <a href="javascript:;" class="js-cart-remove">{% tr 'Remove' %}</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="member-checkout">
+        <div class="member-checkout__address">
+            <label>{% tr 'ShippingAddress' %}</label>
+            <select id="checkout-address"></select>
+            <a href="javascript:;" class="js-address-toggle">{% tr 'AddNewAddress' %}</a>
+        </div>
+        <div class="member-checkout__newaddress" id="address-form" hidden>
+            <div class="member-fields">
+                <div class="member-field">
+                    <label>{% tr 'ReceiverName' %}</label>
+                    <input type="text" name="addr_name">
+                </div>
+                <div class="member-field">
+                    <label>{% tr 'MobilePhone' %}</label>
+                    <input type="text" name="addr_phone">
+                </div>
+                <div class="member-field member-field--full">
+                    <label>{% tr 'AddressDetail' %}</label>
+                    <input type="text" name="addr_info" placeholder="{% tr 'ProvinceCityStreet' %}">
+                </div>
+            </div>
+            <button type="button" class="member-btn member-btn--ghost js-address-save">{% tr 'SaveAddress' %}</button>
+        </div>
+        <div class="member-checkout__row">
+            <label>{% tr 'OrderRemark' %}</label>
+            <input type="text" id="checkout-remark" placeholder="{% tr 'Optional' %}">
+        </div>
+        <div class="member-checkout__foot">
+            <span class="member-checkout__total">{% tr 'TotalAmount' %}：<b>¥{% if cartTotal > 0 %}{{ cartTotal|priceFormat }}{% else %}0.00{% endif %}</b></span>
+            <button type="button" class="member-btn js-checkout">{% tr 'SubmitOrder' %}</button>
+        </div>
+    </div>
+    {% else %}
+    <div class="member-empty">
+        <i class="fa fa-shopping-cart"></i>
+        <p>{% tr 'CartIsEmptyTip' %}</p>
+        <a class="member-btn member-btn--ghost" href="/">{% tr 'GoShopping' %}</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block member_script %}
+<script>
+    (function () {
+        function reload() {
+            location.reload();
+        }
+
+        document.querySelectorAll('.js-qty-plus').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var row = btn.closest('.member-cart__row');
+                var input = row.querySelector('.js-qty-input');
+                var qty = parseInt(input.value, 10) + 1;
+                updateQty(row, qty);
+            });
+        });
+        document.querySelectorAll('.js-qty-minus').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var row = btn.closest('.member-cart__row');
+                var input = row.querySelector('.js-qty-input');
+                var qty = parseInt(input.value, 10) - 1;
+                updateQty(row, qty);
+            });
+        });
+        document.querySelectorAll('.js-qty-input').forEach(function (input) {
+            input.addEventListener('change', function () {
+                var row = input.closest('.member-cart__row');
+                updateQty(row, parseInt(input.value, 10) || 1);
+            });
+        });
+
+        function updateQty(row, qty) {
+            if (qty < 1) {
+                qty = 1;
+            }
+            Member.request('/api/cart/update', { body: { cart_id: parseInt(row.getAttribute('data-cart'), 10), quantity: qty } })
+                .then(reload).catch(Member.errorToast);
+        }
+
+        document.querySelectorAll('.js-cart-remove').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var row = btn.closest('.member-cart__row');
+                Member.request('/api/cart/delete', { body: { cart_id: parseInt(row.getAttribute('data-cart'), 10) } })
+                    .then(reload).catch(Member.errorToast);
+            });
+        });
+
+        var clearBtn = document.querySelector('.js-cart-clear');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function () {
+                if (!confirm(MEMBER_I18N.confirmRemove)) {
+                    return;
+                }
+                Member.request('/api/cart/clear', { body: {} }).then(reload).catch(Member.errorToast);
+            });
+        }
+
+        // 地址
+        var addressSelect = document.getElementById('checkout-address');
+        function loadAddresses(selected) {
+            if (!addressSelect) {
+                return;
+            }
+            Member.get('/api/order/addresses').then(function (res) {
+                var list = res.data || [];
+                addressSelect.innerHTML = '';
+                if (!list.length) {
+                    addressSelect.innerHTML = '<option value="0">' + MEMBER_I18N.fillAddress + '</option>';
+                    return;
+                }
+                list.forEach(function (item) {
+                    var opt = document.createElement('option');
+                    opt.value = item.id;
+                    opt.textContent = (item.name || '') + ' ' + (item.phone || '') + ' ' + (item.address_info || '');
+                    if (selected && selected === item.id) {
+                        opt.selected = true;
+                    }
+                    addressSelect.appendChild(opt);
+                });
+            }).catch(Member.errorToast);
+        }
+        loadAddresses(0);
+
+        var toggleBtn = document.querySelector('.js-address-toggle');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function () {
+                var form = document.getElementById('address-form');
+                form.hidden = !form.hidden;
+            });
+        }
+
+        var saveAddr = document.querySelector('.js-address-save');
+        if (saveAddr) {
+            saveAddr.addEventListener('click', function () {
+                var name = document.querySelector('[name="addr_name"]').value.trim();
+                var phone = document.querySelector('[name="addr_phone"]').value.trim();
+                var info = document.querySelector('[name="addr_info"]').value.trim();
+                if (name === '' || phone === '' || info === '') {
+                    Member.toast(MEMBER_I18N.fillAddress);
+                    return;
+                }
+                Member.request('/api/order/address', { body: { name: name, phone: phone, address_info: info } })
+                    .then(function (res) {
+                        var id = res.data && res.data.id ? res.data.id : 0;
+                        document.getElementById('address-form').hidden = true;
+                        loadAddresses(id);
+                        Member.toast(MEMBER_I18N.saveSuccess);
+                    }).catch(Member.errorToast);
+            });
+        }
+
+        var checkoutBtn = document.querySelector('.js-checkout');
+        if (checkoutBtn) {
+            checkoutBtn.addEventListener('click', function () {
+                var addressId = parseInt(addressSelect.value, 10) || 0;
+                if (!addressId) {
+                    Member.toast(MEMBER_I18N.selectAddress);
+                    return;
+                }
+                var remark = document.getElementById('checkout-remark').value.trim();
+                checkoutBtn.disabled = true;
+                Member.request('/api/cart/checkout', { body: { address_id: addressId, remark: remark } })
+                    .then(function () {
+                        Member.toast(MEMBER_I18N.orderCreated);
+                        setTimeout(function () { location.href = '/member/orders'; }, 900);
+                    }).catch(function (err) {
+                        checkoutBtn.disabled = false;
+                        Member.errorToast(err);
+                    });
+            });
+        }
+    })();
+</script>
+{% endblock %}

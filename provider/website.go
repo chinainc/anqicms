@@ -450,6 +450,8 @@ func InitWebsite(mw *model.Website) {
 		} else {
 			_ = AutoMigrateDB(db, false)
 		}
+		// 会员中心新增的表/列（AutoMigrateDB 只在版本变化时跑），这里保证一次幂等迁移
+		go AutoMigrateMemberCenter(db)
 		w.InitSetting()
 		w.InitModelData()
 		// fix BaseUri

@@ -18,6 +18,7 @@ type Comment struct {
 	ParentId    uint     `json:"parent_id" gorm:"column:parent_id;type:int(10) unsigned not null;default:0;index:idx_parent_id"`
 	ToUid       uint     `json:"to_uid" gorm:"column:to_uid;type:int(10) unsigned not null;default:0;index:idx_to_uid"`
 	Status      uint     `json:"status" gorm:"column:status;type:tinyint(1) not null;default:0"` // 状态，0 未处理，1 正常，2 疑似垃圾 3 垃圾
+	Rating      int      `json:"rating" gorm:"column:rating;type:tinyint(1) not null;default:0"` // 评价星级 0=未评分 1-5
 	ItemTitle   string   `json:"item_title" gorm:"-"`
 	Parent      *Comment `json:"parent" gorm:"-"`
 	Active      bool     `json:"active" gorm:"-"`

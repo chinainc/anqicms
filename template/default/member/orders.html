@@ -1,0 +1,79 @@
+{% extends 'member/layout.html' %}
+
+{% block member_title %}{% tr 'MyOrders' %}{% endblock %}
+
+{% block member %}
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'MyOrders' %}</h3>
+    </div>
+
+    <div class="member-tabs">
+        <a class="member-tab{% if orderStatus == '' %} is-active{% endif %}" href="/member/orders">{% tr 'All' %}</a>
+        <a class="member-tab{% if orderStatus == 'waiting' %} is-active{% endif %}" href="/member/orders?status=waiting">{% tr 'WaitingPayment' %}</a>
+        <a class="member-tab{% if orderStatus == 'paid' %} is-active{% endif %}" href="/member/orders?status=paid">{% tr 'WaitingDelivery' %}</a>
+        <a class="member-tab{% if orderStatus == 'delivery' %} is-active{% endif %}" href="/member/orders?status=delivery">{% tr 'WaitingReceive' %}</a>
+        <a class="member-tab{% if orderStatus == 'finished' %} is-active{% endif %}" href="/member/orders?status=finished">{% tr 'Completed' %}</a>
+        <a class="member-tab{% if orderStatus == 'refunding' %} is-active{% endif %}" href="/member/orders?status=refunding">{% tr 'OrderRefundingShort' %}</a>
+        <a class="member-tab{% if orderStatus == 'closed' %} is-active{% endif %}" href="/member/orders?status=closed">{% tr 'OrderClosedShort' %}</a>
+    </div>
+
+    {% if orders %}
+    <div class="member-orders">
+        {% for item in orders %}
+        <div class="member-order">
+            <div class="member-order__head">
+                <span class="member-order__no">{% tr 'OrderNo' %}：{{ item.OrderId }}</span>
+                <span class="member-order__time">{{ item.CreatedTime|dateFormat:"2006-01-02 15:04" }}</span>
+                <span class="member-badge member-badge--{{ item.StatusClass }}">{{ item.StatusText }}</span>
+            </div>
+            <ul class="member-order__goods">
+                {% for detail in item.Details %}
+                <li class="member-order__good">
+                    <a class="member-order__thumb" href="{% if detail.Goods %}{{ detail.Goods.Link }}{% else %}javascript:;{% endif %}">
+                        {% if detail.Goods and detail.Goods.Thumb %}
+                        <img src="{{ detail.Goods.Thumb }}" alt="">
+                        {% else %}
+                        <i class="fa fa-cube"></i>
+                        {% endif %}
+                    </a>
+                    <div class="member-order__good-body">
+                        <a class="member-order__good-title" href="{% if detail.Goods %}{{ detail.Goods.Link }}{% else %}javascript:;{% endif %}">
+                            {% if detail.Goods %}{{ detail.Goods.Title }}{% else %}{% tr 'GoodsDeleted' %}{% endif %}
+                        </a>
+                        <span class="member-order__good-meta">¥{% if detail.Price > 0 %}{{ detail.Price|priceFormat }}{% else %}0.00{% endif %} × {{ detail.Quantity }}</span>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            <div class="member-order__foot">
+                <span class="member-order__amount">{% tr 'OrderAmount' %}：
+                    <b>¥{% if item.Amount > 0 %}{{ item.Amount|priceFormat }}{% else %}0.00{% endif %}</b>
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if pager.TotalPage > 1 %}
+    <div class="member-pager">
+        {% if pager.PrevLink %}<a class="member-pager__link" href="{{ pager.PrevLink }}">{% tr 'PrevPage' %}</a>{% endif %}
+        {% for link in pager.Links %}
+            {% if link.Current %}
+            <span class="member-pager__link is-current">{{ link.Page }}</span>
+            {% else %}
+            <a class="member-pager__link" href="{{ link.Link }}">{{ link.Page }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if pager.NextLink %}<a class="member-pager__link" href="{{ pager.NextLink }}">{% tr 'NextPage' %}</a>{% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="member-empty">
+        <i class="fa fa-list-alt"></i>
+        <p>{% tr 'NoOrders' %}</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

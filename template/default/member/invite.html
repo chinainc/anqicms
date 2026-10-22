@@ -1,0 +1,135 @@
+{% extends 'member/layout.html' %}
+
+{% block member_title %}{% tr 'DistributionInvite' %}{% endblock %}
+
+{% block member %}
+<div class="member-stats">
+    <div class="member-stat">
+        <div class="member-stat__icon"><i class="fa fa-users"></i></div>
+        <div class="member-stat__body">
+            <div class="member-stat__label">{% tr 'DirectInvites' %}</div>
+            <div class="member-stat__value">{{ invite.TeamCount }}</div>
+        </div>
+    </div>
+    <div class="member-stat">
+        <div class="member-stat__icon"><i class="fa fa-sitemap"></i></div>
+        <div class="member-stat__body">
+            <div class="member-stat__label">{% tr 'TeamTotal' %}</div>
+            <div class="member-stat__value">{{ invite.TeamTotal }}</div>
+        </div>
+    </div>
+    <div class="member-stat">
+        <div class="member-stat__icon"><i class="fa fa-cny"></i></div>
+        <div class="member-stat__body">
+            <div class="member-stat__label">{% tr 'CommissionAvailable' %}</div>
+            <div class="member-stat__value">{% if invite.CommissionWait > 0 %}{{ invite.CommissionWait|priceFormat }}{% else %}0.00{% endif %}</div>
+        </div>
+    </div>
+    <div class="member-stat">
+        <div class="member-stat__icon"><i class="fa fa-check-circle-o"></i></div>
+        <div class="member-stat__body">
+            <div class="member-stat__label">{% tr 'CommissionWithdrawn' %}</div>
+            <div class="member-stat__value">{% if invite.CommissionPaid > 0 %}{{ invite.CommissionPaid|priceFormat }}{% else %}0.00{% endif %}</div>
+        </div>
+    </div>
+</div>
+
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'MyInviteLink' %}</h3>
+    </div>
+    <div class="invite-box">
+        <div class="invite-box__qr">
+            {% if invite.InviteLink %}
+            <img src="{{ invite.QrcodeUrl }}" alt="{% tr 'InviteQrcode' %}" width="150" height="150">
+            {% else %}
+            <div class="invite-box__qr-empty"><i class="fa fa-qrcode"></i></div>
+            {% endif %}
+            <p>{% tr 'ScanToRegister' %}</p>
+        </div>
+        <div class="invite-box__info">
+            <div class="member-field">
+                <label>{% tr 'InviteCode' %}</label>
+                <div class="invite-copy">
+                    <input type="text" readonly value="{{ invite.InviteCode }}" id="invite-code">
+                    <button type="button" class="member-btn member-btn--sm member-btn--ghost js-copy" data-target="invite-code">{% tr 'Copy' %}</button>
+                </div>
+            </div>
+            <div class="member-field">
+                <label>{% tr 'InviteLink' %}</label>
+                <div class="invite-copy">
+                    <input type="text" readonly value="{{ invite.InviteLink }}" id="invite-link">
+                    <button type="button" class="member-btn member-btn--sm js-copy" data-target="invite-link">{% tr 'Copy' %}</button>
+                </div>
+            </div>
+            <p class="member-form__tip">{% tr 'InviteTip' %}</p>
+        </div>
+    </div>
+</div>
+
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'InviteRecords' %}</h3>
+    </div>
+
+    {% if inviteMembers %}
+    <table class="member-table">
+        <thead>
+            <tr>
+                <th>{% tr 'Member' %}</th>
+                <th>{% tr 'Level' %}</th>
+                <th>{% tr 'RegisterTime' %}</th>
+                <th>{% tr 'Commission' %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in inviteMembers %}
+            <tr>
+                <td>
+                    <span class="invite-member">
+                        <i class="fa fa-user-circle-o"></i>
+                        {{ item.UserName }}
+                    </span>
+                </td>
+                <td>{% if item.Level == 1 %}{% tr 'LevelFirst' %}{% else %}{% tr 'LevelSecond' %}{% endif %}</td>
+                <td>{{ item.CreatedTime|dateFormat:"2006-01-02" }}</td>
+                <td class="is-income">{% if item.Commission > 0 %}{{ item.Commission|priceFormat }}{% else %}-{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="member-empty">
+        <i class="fa fa-users"></i>
+        <p>{% tr 'NoInviteRecords' %}</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block member_script %}
+<script>
+    (function () {
+        document.querySelectorAll('.js-copy').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var input = document.getElementById(btn.getAttribute('data-target'));
+                if (!input || !input.value) {
+                    return;
+                }
+                var done = function () { Member.toast(MEMBER_I18N.copied); };
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(input.value).then(done).catch(function () {
+                        input.select();
+                        document.execCommand('copy');
+                        done();
+                    });
+                    return;
+                }
+                input.select();
+                document.execCommand('copy');
+                done();
+            });
+        });
+    })();
+</script>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends 'member/layout.html' %}
+
+{% block member_title %}{% tr 'MyMessages' %}{% endblock %}
+
+{% block member %}
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'MyMessages' %}</h3>
+        {% if messageTotal > 0 %}
+        <span class="member-panel__more">{% tr 'Total' %} {{ messageTotal }}</span>
+        {% endif %}
+    </div>
+
+    {% if messages %}
+    <ul class="member-review-list">
+        {% for item in messages %}
+        <li class="member-review">
+            <div class="member-review__head">
+                <span class="member-review__user">{{ item.UserName }}</span>
+                <span class="member-badge member-badge--{{ item.StatusClass }}">{{ item.StatusText }}</span>
+                <span class="member-review__time">{{ item.CreatedText }}</span>
+            </div>
+            <p class="member-review__content">{{ item.Content }}</p>
+            <div class="member-review__meta">
+                <span>{% tr 'ContactInfo' %}：{{ item.Contact }}</span>
+                <span class="member-comment__actions">
+                    <button type="button" class="member-link-btn member-link-btn--danger js-message-delete" data-id="{{ item.Id }}">{% tr 'Delete' %}</button>
+                </span>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+
+    {% if pager.TotalPage > 1 %}
+    <div class="member-pager">
+        {% if pager.PrevLink %}<a class="member-pager__link" href="{{ pager.PrevLink }}">{% tr 'PrevPage' %}</a>{% endif %}
+        {% for link in pager.Links %}
+            {% if link.Current %}
+            <span class="member-pager__link is-current">{{ link.Page }}</span>
+            {% else %}
+            <a class="member-pager__link" href="{{ link.Link }}">{{ link.Page }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if pager.NextLink %}<a class="member-pager__link" href="{{ pager.NextLink }}">{% tr 'NextPage' %}</a>{% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="member-empty">
+        <i class="fa fa-envelope-o"></i>
+        <p>{% tr 'NoMessagesYet' %}</p>
+        <a class="member-btn member-btn--ghost" href="/guestbook.html">{% tr 'LeaveAMessage' %}</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block member_script %}
+<script>
+    (function () {
+        document.querySelectorAll('.js-message-delete').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                if (!confirm(MEMBER_I18N.confirmOperate)) {
+                    return;
+                }
+                Member.post('/api/user/guestbook/delete', {
+                    id: parseInt(btn.getAttribute('data-id'), 10)
+                }).then(function (res) {
+                    Member.toast(res.msg || MEMBER_I18N.saveSuccess);
+                    setTimeout(function () { location.reload(); }, 600);
+                }).catch(Member.errorToast);
+            });
+        });
+    })();
+</script>
+{% endblock %}

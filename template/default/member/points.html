@@ -1,0 +1,104 @@
+{% extends 'member/layout.html' %}
+
+{% block member_title %}{% tr 'MyPoints' %}{% endblock %}
+
+{% block member %}
+<div class="member-sign">
+    <div class="member-sign__left">
+        <div class="member-sign__points">{{ points }}</div>
+        <div class="member-sign__label">{% tr 'MyPoints' %}</div>
+    </div>
+    <div class="member-sign__facts">
+        <div class="member-sign__fact">
+            <span>{% tr 'SignDays' %}</span>
+            <b>{{ signDays }}</b>
+        </div>
+        <div class="member-sign__fact">
+            <span>{% tr 'SignMonthCount' %}</span>
+            <b>{{ monthCount }}</b>
+        </div>
+        <div class="member-sign__fact">
+            <span>{% tr 'SignBasePoints' %}</span>
+            <b>{{ basePoints }}</b>
+        </div>
+    </div>
+    <div class="member-sign__action">
+        {% if checkedToday %}
+        <button type="button" class="member-btn member-btn--ghost" disabled>{% tr 'AlreadyCheckedInToday' %}</button>
+        {% else %}
+        <button type="button" class="member-btn js-sign">{% tr 'CheckInNow' %}</button>
+        {% endif %}
+    </div>
+</div>
+
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'PointLogs' %}</h3>
+    </div>
+    {% if logs %}
+    <table class="member-table">
+        <thead>
+            <tr>
+                <th>{% tr 'Time' %}</th>
+                <th>{% tr 'Type' %}</th>
+                <th>{% tr 'PointsChange' %}</th>
+                <th>{% tr 'PointsAfter' %}</th>
+                <th>{% tr 'Remark' %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in logs %}
+            <tr>
+                <td>{{ item.CreatedTime|dateFormat:"2006-01-02 15:04" }}</td>
+                <td>{% if item.Type == 1 %}{% tr 'PointTypeSign' %}{% elif item.Type == 2 %}{% tr 'PointTypeUse' %}{% elif item.Type == 3 %}{% tr 'PointTypeAdmin' %}{% else %}{% tr 'PointTypeRedeem' %}{% endif %}</td>
+                <td class="{% if item.Points > 0 %}is-income{% else %}is-expend{% endif %}">{% if item.Points > 0 %}+{% endif %}{{ item.Points }}</td>
+                <td>{{ item.AfterPoints }}</td>
+                <td class="member-table__remark">{{ item.Remark }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if pager.TotalPage > 1 %}
+    <div class="member-pager">
+        {% if pager.PrevLink %}<a class="member-pager__link" href="{{ pager.PrevLink }}">{% tr 'PrevPage' %}</a>{% endif %}
+        {% for link in pager.Links %}
+            {% if link.Current %}
+            <span class="member-pager__link is-current">{{ link.Page }}</span>
+            {% else %}
+            <a class="member-pager__link" href="{{ link.Link }}">{{ link.Page }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if pager.NextLink %}<a class="member-pager__link" href="{{ pager.NextLink }}">{% tr 'NextPage' %}</a>{% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="member-empty">
+        <i class="fa fa-diamond"></i>
+        <p>{% tr 'NoPointLogs' %}</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block member_script %}
+<script>
+    (function () {
+        var btn = document.querySelector('.js-sign');
+        if (!btn) {
+            return;
+        }
+        btn.addEventListener('click', function () {
+            btn.disabled = true;
+            Member.request('/api/sign/do', { body: {} }).then(function (res) {
+                Member.toast(MEMBER_I18N.signSuccess + ' +' + (res.data.sign.points || 0));
+                setTimeout(function () { location.reload(); }, 900);
+            }).catch(function (err) {
+                btn.disabled = false;
+                Member.errorToast(err);
+            });
+        });
+    })();
+</script>
+{% endblock %}

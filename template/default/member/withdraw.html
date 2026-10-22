@@ -1,0 +1,135 @@
+{% extends 'member/layout.html' %}
+
+{% block member_title %}{% tr 'BalanceWithdraw' %}{% endblock %}
+
+{% block member %}
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'BalanceWithdraw' %}</h3>
+        <span class="member-panel__more">{% tr 'Balance' %}：{% if userInfo.Balance > 0 %}{{ userInfo.Balance|priceFormat }}{% else %}0.00{% endif %}</span>
+    </div>
+
+    <div class="member-fields">
+        <div class="member-field">
+            <label>{% tr 'WithdrawAmount' %}</label>
+            <input type="text" id="withdraw-amount" placeholder="{% tr 'WithdrawAmountPlaceholder' %}" inputmode="decimal">
+        </div>
+        <div class="member-field">
+            <label>{% tr 'WithdrawWay' %}</label>
+            <select id="withdraw-way">
+                <option value="2">{% tr 'WithdrawWayAlipay' %}</option>
+                <option value="1">{% tr 'WithdrawWayWechat' %}</option>
+                <option value="3">{% tr 'WithdrawWayBank' %}</option>
+            </select>
+        </div>
+        <div class="member-field">
+            <label>{% tr 'WithdrawRealName' %}</label>
+            <input type="text" id="withdraw-realname" placeholder="{% tr 'WithdrawRealNamePlaceholder' %}">
+        </div>
+        <div class="member-field">
+            <label>{% tr 'WithdrawAccount' %}</label>
+            <input type="text" id="withdraw-account" placeholder="{% tr 'WithdrawAccountPlaceholder' %}">
+        </div>
+        <div class="member-field member-field--full">
+            <label>{% tr 'Remark' %}</label>
+            <input type="text" id="withdraw-remark" placeholder="{% tr 'WithdrawRemarkPlaceholder' %}">
+        </div>
+    </div>
+
+    <p class="member-form__tip">{% tr 'WithdrawTip' %}</p>
+
+    <div class="member-form__actions">
+        <button type="button" class="member-btn js-withdraw-apply">{% tr 'SubmitWithdraw' %}</button>
+        <a class="member-btn member-btn--ghost" href="/member/finance">{% tr 'MyFinances' %}</a>
+    </div>
+</div>
+
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'WithdrawRecords' %}</h3>
+    </div>
+
+    {% if withdraws %}
+    <table class="member-table">
+        <thead>
+            <tr>
+                <th>{% tr 'Time' %}</th>
+                <th>{% tr 'Amount' %}</th>
+                <th>{% tr 'WithdrawWay' %}</th>
+                <th>{% tr 'Remark' %}</th>
+                <th>{% tr 'Status' %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in withdraws %}
+            <tr>
+                <td>{{ item.CreatedText }}</td>
+                <td class="is-expend">{{ item.Amount|priceFormat }}</td>
+                <td>{{ item.WayText }}</td>
+                <td class="member-table__remark">{{ item.Remark }}</td>
+                <td><span class="member-badge member-badge--{{ item.StatusClass }}">{{ item.StatusText }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if pager.TotalPage > 1 %}
+    <div class="member-pager">
+        {% if pager.PrevLink %}<a class="member-pager__link" href="{{ pager.PrevLink }}">{% tr 'PrevPage' %}</a>{% endif %}
+        {% for link in pager.Links %}
+            {% if link.Current %}
+            <span class="member-pager__link is-current">{{ link.Page }}</span>
+            {% else %}
+            <a class="member-pager__link" href="{{ link.Link }}">{{ link.Page }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if pager.NextLink %}<a class="member-pager__link" href="{{ pager.NextLink }}">{% tr 'NextPage' %}</a>{% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="member-empty">
+        <i class="fa fa-credit-card"></i>
+        <p>{% tr 'NoWithdrawRecords' %}</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block member_script %}
+<script>
+    (function () {
+        document.querySelector('.js-withdraw-apply').addEventListener('click', function () {
+            var btn = this;
+            var raw = (document.getElementById('withdraw-amount').value || '').trim();
+            if (!/^\d+(\.\d{1,2})?$/.test(raw) || parseFloat(raw) <= 0) {
+                Member.toast(MEMBER_I18N.enterAmount);
+                return;
+            }
+            var realName = (document.getElementById('withdraw-realname').value || '').trim();
+            var account = (document.getElementById('withdraw-account').value || '').trim();
+            if (!realName || !account) {
+                Member.toast(MEMBER_I18N.fillWithdrawAccount);
+                return;
+            }
+            if (!confirm(MEMBER_I18N.confirmOperate)) {
+                return;
+            }
+            btn.disabled = true;
+            Member.post('/api/user/withdraw', {
+                amount: Math.round(parseFloat(raw) * 100),
+                way: parseInt(document.getElementById('withdraw-way').value, 10) || 2,
+                real_name: realName,
+                account: account,
+                remark: (document.getElementById('withdraw-remark').value || '').trim()
+            }).then(function (res) {
+                Member.toast(res.msg || MEMBER_I18N.saveSuccess);
+                setTimeout(function () { location.reload(); }, 800);
+            }).catch(function (err) {
+                btn.disabled = false;
+                Member.errorToast(err);
+            });
+        });
+    })();
+</script>
+{% endblock %}

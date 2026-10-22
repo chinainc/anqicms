@@ -1,0 +1,72 @@
+{% extends 'member/layout.html' %}
+
+{% block member_title %}{% tr 'ReceivedReviews' %}{% endblock %}
+
+{% block member %}
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'ReceivedReviews' %}</h3>
+        {% if ratingCount > 0 %}
+        <span class="member-rating-summary">
+            <b>{{ avgRatingText }}</b>
+            <span class="member-stars">
+                <i class="fa {% if avgRating >= 1 %}fa-star{% else %}fa-star-o{% endif %}"></i>
+                <i class="fa {% if avgRating >= 2 %}fa-star{% else %}fa-star-o{% endif %}"></i>
+                <i class="fa {% if avgRating >= 3 %}fa-star{% else %}fa-star-o{% endif %}"></i>
+                <i class="fa {% if avgRating >= 4 %}fa-star{% else %}fa-star-o{% endif %}"></i>
+                <i class="fa {% if avgRating >= 5 %}fa-star{% else %}fa-star-o{% endif %}"></i>
+            </span>
+            <em>{{ ratingCount }}</em>
+        </span>
+        {% endif %}
+    </div>
+
+    {% if comments %}
+    <ul class="member-review-list">
+        {% for item in comments %}
+        <li class="member-review">
+            <div class="member-review__head">
+                <span class="member-review__user">{{ item.UserName }}</span>
+                <span class="member-stars">
+                    {% if item.Rating > 0 %}
+                    <i class="fa {% if item.Rating >= 1 %}fa-star{% else %}fa-star-o{% endif %}"></i>
+                    <i class="fa {% if item.Rating >= 2 %}fa-star{% else %}fa-star-o{% endif %}"></i>
+                    <i class="fa {% if item.Rating >= 3 %}fa-star{% else %}fa-star-o{% endif %}"></i>
+                    <i class="fa {% if item.Rating >= 4 %}fa-star{% else %}fa-star-o{% endif %}"></i>
+                    <i class="fa {% if item.Rating >= 5 %}fa-star{% else %}fa-star-o{% endif %}"></i>
+                    {% else %}
+                    <span class="member-review__norating">{% tr 'NoRating' %}</span>
+                    {% endif %}
+                </span>
+                <span class="member-review__time">{{ item.CreatedTime|dateFormat:"2006-01-02 15:04" }}</span>
+            </div>
+            <p class="member-review__content">{{ item.Content }}</p>
+            <div class="member-review__meta">
+                <span>{% tr 'ReviewOn' %}：{{ item.ItemTitle }}</span>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+
+    {% if pager.TotalPage > 1 %}
+    <div class="member-pager">
+        {% if pager.PrevLink %}<a class="member-pager__link" href="{{ pager.PrevLink }}">{% tr 'PrevPage' %}</a>{% endif %}
+        {% for link in pager.Links %}
+            {% if link.Current %}
+            <span class="member-pager__link is-current">{{ link.Page }}</span>
+            {% else %}
+            <a class="member-pager__link" href="{{ link.Link }}">{{ link.Page }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if pager.NextLink %}<a class="member-pager__link" href="{{ pager.NextLink }}">{% tr 'NextPage' %}</a>{% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="member-empty">
+        <i class="fa fa-commenting-o"></i>
+        <p>{% tr 'NoReceivedReviews' %}</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

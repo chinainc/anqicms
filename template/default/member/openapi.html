@@ -1,0 +1,164 @@
+{% extends 'member/layout.html' %}
+
+{% block member_title %}{% tr 'OpenApiAccess' %}{% endblock %}
+
+{% block member %}
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'OpenApiAccess' %}</h3>
+        {% if openEnabled %}
+        <span class="member-badge member-badge--completed">{% tr 'ApiKeyEnabled' %}</span>
+        {% else %}
+        <span class="member-badge member-badge--closed">{% tr 'ApiKeyDisabled' %}</span>
+        {% endif %}
+    </div>
+
+    <p class="member-form__tip" style="margin-top:0">{% tr 'OpenApiIntro' %}</p>
+
+    <div class="member-field">
+        <label>{% tr 'ApiKey' %}</label>
+        <div class="openapi-key">
+            <input type="text" readonly id="api-key" value="{{ apiToken }}" placeholder="{% tr 'ApiKeyNotGenerated' %}">
+            <button type="button" class="member-btn member-btn--sm js-copy" data-target="api-key"{% if not openEnabled %} disabled{% endif %}>{% tr 'Copy' %}</button>
+            {% if openEnabled %}
+            <button type="button" class="member-btn member-btn--sm member-btn--ghost js-token" data-action="reset">{% tr 'Regenerate' %}</button>
+            <button type="button" class="member-btn member-btn--sm member-btn--ghost js-token" data-action="clear">{% tr 'Disable' %}</button>
+            {% else %}
+            <button type="button" class="member-btn member-btn--sm js-token" data-action="reset">{% tr 'GenerateApiKey' %}</button>
+            {% endif %}
+        </div>
+        <p class="member-form__tip">{% tr 'ApiKeyTip' %}</p>
+    </div>
+</div>
+
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'OpenApiRest' %}</h3>
+    </div>
+    <p class="member-form__tip" style="margin-top:0">{% tr 'OpenApiRestTip' %}</p>
+    <pre class="openapi-code">curl -H "Authorization: Bearer YOUR_API_KEY" \
+  "{{ openRestBase }}/user/archives?page=1"</pre>
+    <table class="member-table">
+        <thead>
+            <tr>
+                <th>{% tr 'ApiMethod' %}</th>
+                <th>{% tr 'ApiPath' %}</th>
+                <th>{% tr 'ApiDesc' %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>GET</td><td>/user/archives</td><td>{% tr 'ApiDescArchives' %}</td></tr>
+            <tr><td>POST</td><td>/archive/publish</td><td>{% tr 'ApiDescPublish' %}</td></tr>
+            <tr><td>POST</td><td>/archive/delete</td><td>{% tr 'ApiDescDelete' %}</td></tr>
+            <tr><td>POST</td><td>/user/upload</td><td>{% tr 'ApiDescUpload' %}</td></tr>
+            <tr><td>GET</td><td>/user/finances</td><td>{% tr 'ApiDescFinances' %}</td></tr>
+            <tr><td>POST</td><td>/user/withdraw</td><td>{% tr 'ApiDescWithdraw' %}</td></tr>
+            <tr><td>POST</td><td>/user/recharge</td><td>{% tr 'ApiDescRecharge' %}</td></tr>
+            <tr><td>GET</td><td>/user/auth/info</td><td>{% tr 'ApiDescAuth' %}</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'OpenApiMcp' %}</h3>
+    </div>
+    <p class="member-form__tip" style="margin-top:0">{% tr 'OpenApiMcpTip' %}</p>
+    <pre class="openapi-code">{
+  "mcpServers": {
+    "anqicms-member": {
+      "type": "http",
+      "url": "{{ openMcpUrl }}",
+      "headers": { "Authorization": "Bearer YOUR_API_KEY" }
+    }
+  }
+}</pre>
+    <p class="member-form__tip">{% tr 'OpenApiMcpTools' %}</p>
+    <div class="openapi-tools">
+        <span>member_profile</span>
+        <span>content_list</span>
+        <span>content_get</span>
+        <span>content_create</span>
+        <span>content_update</span>
+        <span>content_delete</span>
+        <span>comment_list</span>
+        <span>comment_reply</span>
+        <span>guestbook_list</span>
+        <span>order_list</span>
+        <span>wallet_info</span>
+    </div>
+</div>
+
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'OpenApiCli' %}</h3>
+    </div>
+    <p class="member-form__tip" style="margin-top:0">{% tr 'OpenApiCliTip' %}</p>
+    <pre class="openapi-code"># {% tr 'CliCommentBuild' %}
+go build -o anqicms-cli ./cmd/anqicms-cli
+
+# {% tr 'CliCommentConfig' %}
+export ANQICMS_SERVER="{{ openBaseUrl }}"
+export ANQICMS_TOKEN="YOUR_API_KEY"
+
+# {% tr 'CliCommentUsage' %}
+./anqicms-cli whoami
+./anqicms-cli content list
+./anqicms-cli content get --id 12
+./anqicms-cli content create --title "{% tr 'Title' %}" --category 13 --content-file body.html
+./anqicms-cli content update --id 12 --title "{% tr 'Title' %}"
+./anqicms-cli content delete --id 12 --yes
+./anqicms-cli comment list
+./anqicms-cli order list
+./anqicms-cli wallet
+./anqicms-cli mcp-config</pre>
+</div>
+{% endblock %}
+
+{% block member_script %}
+<script>
+    (function () {
+        document.querySelectorAll('.js-copy').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var input = document.getElementById(btn.getAttribute('data-target'));
+                if (!input || !input.value) {
+                    return;
+                }
+                var done = function () { Member.toast(MEMBER_I18N.copied); };
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(input.value).then(done).catch(function () {
+                        input.select();
+                        document.execCommand('copy');
+                        done();
+                    });
+                    return;
+                }
+                input.select();
+                document.execCommand('copy');
+                done();
+            });
+        });
+
+        document.querySelectorAll('.js-token').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var action = btn.getAttribute('data-action');
+                if (action === 'clear') {
+                    if (!confirm(MEMBER_I18N.confirmRemove)) {
+                        return;
+                    }
+                } else if (!confirm(MEMBER_I18N.confirmOperate)) {
+                    return;
+                }
+                btn.disabled = true;
+                Member.post('/api/user/openapi/token', { action: action }).then(function (res) {
+                    Member.toast(res.msg || MEMBER_I18N.saveSuccess);
+                    setTimeout(function () { location.reload(); }, 700);
+                }).catch(function (err) {
+                    btn.disabled = false;
+                    Member.errorToast(err);
+                });
+            });
+        });
+    })();
+</script>
+{% endblock %}

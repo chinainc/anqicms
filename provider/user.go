@@ -315,6 +315,11 @@ func (w *Website) UpdateUserBalance(req *request.ApiUserBalanceRequest) error {
 	}
 	tx.Commit()
 
+	// 后台给用户加余额后，自动把会员提交的充值申请标记为已到账
+	if req.Amount > 0 {
+		w.settlePendingRecharges(req.UserId, req.Amount)
+	}
+
 	return nil
 }
 

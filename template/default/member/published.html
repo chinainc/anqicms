@@ -1,0 +1,95 @@
+{% extends 'member/layout.html' %}
+
+{% block member_title %}{% tr 'MyPublished' %}{% endblock %}
+
+{% block member %}
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'MyPublished' %}</h3>
+        <a class="member-btn member-btn--ghost" href="/member/publish">{% tr 'PublishContent' %}</a>
+    </div>
+
+    {% if archives %}
+    <ul class="member-fav-list">
+        {% for item in archives %}
+        <li class="member-fav">
+            <a class="member-fav__thumb" href="{% if item.Draft %}javascript:;{% else %}{{ item.Link }}{% endif %}">
+                {% if item.Thumb %}<img src="{{ item.Thumb }}" alt="{{ item.Title }}">{% else %}<i class="fa fa-file-text-o"></i>{% endif %}
+            </a>
+            <div class="member-fav__body">
+                <a class="member-fav__title" href="{% if item.Draft %}javascript:;{% else %}{{ item.Link }}{% endif %}">{{ item.Title }}</a>
+                {% if item.Description %}
+                <p class="member-fav__desc">{{ item.Description|truncatechars:80 }}</p>
+                {% endif %}
+                <div class="member-fav__meta">
+                    <span>{{ item.CreatedTime|dateFormat:"2006-01-02 15:04" }}</span>
+                    <span>
+                        {% if item.Draft %}
+                        <span class="member-badge member-badge--waiting">{% tr 'Pending' %}</span>
+                        {% else %}
+                        <span class="member-badge member-badge--completed">{% tr 'Published' %}</span>
+                        {% endif %}
+                        {% if item.Views > 0 %}<em class="member-views"><i class="fa fa-eye"></i> {{ item.Views }}</em>{% endif %}
+                    </span>
+                </div>
+            </div>
+            <div class="member-fav__actions">
+                <a class="member-fav__action" href="/member/publish?id={{ item.Id }}"><i class="fa fa-pencil"></i> {% tr 'Edit' %}</a>
+                <button type="button" class="member-fav__action member-fav__action--danger member-publish-del" data-id="{{ item.Id }}"><i class="fa fa-trash-o"></i> {% tr 'Delete' %}</button>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+
+    {% if pager.TotalPage > 1 %}
+    <div class="member-pager">
+        {% if pager.PrevLink %}<a class="member-pager__link" href="{{ pager.PrevLink }}">{% tr 'PrevPage' %}</a>{% endif %}
+        {% for link in pager.Links %}
+            {% if link.Current %}
+            <span class="member-pager__link is-current">{{ link.Page }}</span>
+            {% else %}
+            <a class="member-pager__link" href="{{ link.Link }}">{{ link.Page }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if pager.NextLink %}<a class="member-pager__link" href="{{ pager.NextLink }}">{% tr 'NextPage' %}</a>{% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="member-empty">
+        <i class="fa fa-file-text-o"></i>
+        <p>{% tr 'NoPublishedContent' %}</p>
+        <a class="member-btn member-btn--ghost" href="/member/publish">{% tr 'PublishContent' %}</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block member_script %}
+<script>
+    (function () {
+        document.querySelectorAll('.member-publish-del').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                if (!window.confirm(MEMBER_I18N.confirmOperate)) {
+                    return;
+                }
+                var id = parseInt(btn.getAttribute('data-id'), 10) || 0;
+                if (!id) {
+                    return;
+                }
+                btn.disabled = true;
+                Member.post('/api/archive/delete', { id: id }).then(function (res) {
+                    Member.toast(res.msg || MEMBER_I18N.saveSuccess);
+                    var item = btn.closest('.member-fav');
+                    if (item) {
+                        item.parentNode.removeChild(item);
+                    }
+                }).catch(function (err) {
+                    btn.disabled = false;
+                    Member.errorToast(err);
+                });
+            });
+        });
+    })();
+</script>
+{% endblock %}

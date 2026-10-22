@@ -118,6 +118,24 @@ func InitDB(cfg *config.MysqlConfig) (*gorm.DB, error) {
 	return db, nil
 }
 
+// AutoMigrateMemberCenter 会员中心新增的表/列（充值申请表、留言的 user_id）。
+// AutoMigrateDB 只在版本号变化时才执行，这里单独做一次幂等迁移，保证升级后立即可用。
+func AutoMigrateMemberCenter(db *gorm.DB) {
+	if db == nil {
+		return
+	}
+	if err := db.Set("gorm:table_options", "DEFAULT CHARSET=utf8mb4").
+		AutoMigrate(&model.Recharge{}, &model.Guestbook{}, &model.UserAuth{}); err != nil {
+		log.Println("migrate member center error ", err)
+	}
+	// 会员开放接口密钥（只加一列，不做整表迁移，避免 users 表被重排）
+	if !db.Migrator().HasColumn(&model.User{}, "api_token") {
+		if err := db.Migrator().AddColumn(&model.User{}, "ApiToken"); err != nil {
+			log.Println("migrate users.api_token error ", err)
+		}
+	}
+}
+
 func AutoMigrateDB(db *gorm.DB, force bool) error {
 	if !force {
 		var lastVersion string
@@ -182,6 +200,7 @@ func AutoMigrateDB(db *gorm.DB, force bool) error {
 			&model.Payment{},
 			&model.Finance{},
 			&model.Commission{},
+			&model.Recharge{},
 			&model.WechatMenu{},
 			&model.WechatMessage{},
 			&model.WechatReplyRule{},
@@ -199,6 +218,12 @@ func AutoMigrateDB(db *gorm.DB, force bool) error {
 			&model.PaymentAccount{},
 			&model.PaymentStatistic{},
 			&model.MailPlan{},
+			// 会员商城：购物车 / 积分 / 签到 / 店铺 / 保证金
+			&model.Cart{},
+			&model.PointLog{},
+			&model.UserSign{},
+			&model.Shop{},
+			&model.ShopDepositLog{},
 		}
 		//自动迁移数据库
 		err := db.Set("gorm:table_options", "DEFAULT CHARSET=utf8mb4").AutoMigrate(models...)

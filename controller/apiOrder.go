@@ -733,7 +733,7 @@ func createBalancePayment(ctx iris.Context, payment *model.Payment, order *model
 		tx.Rollback()
 		ctx.JSON(iris.Map{
 			"code": config.StatusFailed,
-			"msg":  ctx.Tr("PaymentFailed"),
+			"msg":  provider.CurrentSite(ctx).TplTr("PaymentFailed"),
 		})
 		return
 	}
@@ -744,14 +744,14 @@ func createBalancePayment(ctx iris.Context, payment *model.Payment, order *model
 	if err != nil {
 		ctx.JSON(iris.Map{
 			"code": config.StatusFailed,
-			"msg":  ctx.Tr("PaymentFailed"),
+			"msg":  provider.CurrentSite(ctx).TplTr("PaymentFailed"),
 		})
 		return
 	}
 
 	ctx.JSON(iris.Map{
 		"code": config.StatusOK,
-		"msg":  ctx.Tr("PaymentSuccessful"),
+		"msg":  provider.CurrentSite(ctx).TplTr("PaymentSuccessful"),
 		"data": iris.Map{
 			"payment_id": payment.PaymentId,
 			"order_id":   order.OrderId,

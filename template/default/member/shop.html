@@ -1,0 +1,333 @@
+{% extends 'member/layout.html' %}
+
+{% block member_title %}{% tr 'MyShop' %}{% endblock %}
+
+{% block member %}
+<div class="member-stats">
+    <div class="member-stat">
+        <div class="member-stat__icon"><i class="fa fa-shopping-bag"></i></div>
+        <div class="member-stat__body">
+            <div class="member-stat__label">{% tr 'SoldOrdersCount' %}</div>
+            <div class="member-stat__value">{{ sellerOrderCount }}</div>
+        </div>
+    </div>
+    <div class="member-stat">
+        <div class="member-stat__icon"><i class="fa fa-cny"></i></div>
+        <div class="member-stat__body">
+            <div class="member-stat__label">{% tr 'SaleAmount' %}</div>
+            <div class="member-stat__value">{% if sellerSaleAmount > 0 %}{{ sellerSaleAmount|priceFormat }}{% else %}0.00{% endif %}</div>
+        </div>
+    </div>
+    <div class="member-stat">
+        <div class="member-stat__icon"><i class="fa fa-truck"></i></div>
+        <div class="member-stat__body">
+            <div class="member-stat__label">{% tr 'WaitingDelivery' %}</div>
+            <div class="member-stat__value">{{ sellerPending }}</div>
+        </div>
+    </div>
+    <div class="member-stat">
+        <div class="member-stat__icon"><i class="fa fa-shield"></i></div>
+        <div class="member-stat__body">
+            <div class="member-stat__label">{% tr 'DepositBalance' %}</div>
+            <div class="member-stat__value">{% if shop.Deposit > 0 %}{{ shop.Deposit|priceFormat }}{% else %}0.00{% endif %}</div>
+        </div>
+    </div>
+</div>
+
+<div class="member-panel">
+    <div class="member-tabs">
+        <a class="member-tab is-active" href="javascript:;" data-pane="profile">{% tr 'ShopProfile' %}</a>
+        <a class="member-tab" href="javascript:;" data-pane="decorate">{% tr 'ShopDecoration' %}</a>
+        <a class="member-tab" href="javascript:;" data-pane="deposit">{% tr 'ShopDeposit' %}</a>
+    </div>
+
+    <div class="member-pane is-active" data-pane="profile">
+        <div class="member-fields">
+            <div class="member-field">
+                <label>{% tr 'ShopName' %}</label>
+                <input type="text" name="shop_name" value="{{ shop.Name }}">
+            </div>
+            <div class="member-field">
+                <label>{% tr 'ShopContact' %}</label>
+                <input type="text" name="shop_contact" value="{{ shop.Contact }}" placeholder="{% tr 'ShopContactPlaceholder' %}">
+            </div>
+            <div class="member-field">
+                <label>{% tr 'ShopLogo' %}</label>
+                <div class="member-upload" data-upload-shape="square">
+                    <input type="hidden" name="shop_logo" value="{{ shop.Logo }}">
+                    <div class="member-upload__box">
+                        <img class="member-upload__img" src="{{ shop.LogoUrl }}" alt=""{% if not shop.LogoUrl %} hidden{% endif %}>
+                        <span class="member-upload__ph"{% if shop.LogoUrl %} hidden{% endif %}><i class="fa fa-plus"></i><em>{% tr 'Upload' %}</em></span>
+                        <button type="button" class="member-upload__del"{% if not shop.LogoUrl %} hidden{% endif %}><i class="fa fa-times"></i></button>
+                    </div>
+                    <input type="file" accept="image/*" hidden>
+                    <p class="member-upload__tip">{% tr 'ShopLogoTip' %}</p>
+                </div>
+            </div>
+            <div class="member-field">
+                <label>{% tr 'ShopBanner' %}</label>
+                <div class="member-upload" data-upload-shape="wide">
+                    <input type="hidden" name="shop_banner" value="{{ shop.Banner }}">
+                    <div class="member-upload__box">
+                        <img class="member-upload__img" src="{{ shop.BannerUrl }}" alt=""{% if not shop.BannerUrl %} hidden{% endif %}>
+                        <span class="member-upload__ph"{% if shop.BannerUrl %} hidden{% endif %}><i class="fa fa-plus"></i><em>{% tr 'Upload' %}</em></span>
+                        <button type="button" class="member-upload__del"{% if not shop.BannerUrl %} hidden{% endif %}><i class="fa fa-times"></i></button>
+                    </div>
+                    <input type="file" accept="image/*" hidden>
+                    <p class="member-upload__tip">{% tr 'ShopBannerTip' %}</p>
+                </div>
+            </div>
+            <div class="member-field member-field--full">
+                <label>{% tr 'ShopIntro' %}</label>
+                <textarea name="shop_intro" rows="3">{{ shop.Intro }}</textarea>
+            </div>
+            <div class="member-field member-field--full">
+                <label>{% tr 'ShopNotice' %}</label>
+                <input type="text" name="shop_notice" value="{{ shop.Notice }}">
+            </div>
+        </div>
+        <div class="member-form__actions">
+            <button type="button" class="member-btn js-save-shop">{% tr 'Save' %}</button>
+        </div>
+    </div>
+
+    <div class="member-pane" data-pane="decorate">
+        <div class="member-fields">
+            <div class="member-field">
+                <label>{% tr 'DecorationLayout' %}</label>
+                <select name="dec_layout">
+                    <option value="wide"{% if decoration.Layout == 'wide' %} selected{% endif %}>{% tr 'LayoutWide' %}</option>
+                    <option value="compact"{% if decoration.Layout == 'compact' %} selected{% endif %}>{% tr 'LayoutCompact' %}</option>
+                </select>
+            </div>
+            <div class="member-field">
+                <label>{% tr 'ThemeColor' %}</label>
+                <input type="text" name="dec_color" value="{% if decoration.ThemeColor %}{{ decoration.ThemeColor }}{% elif shop.ThemeColor %}{{ shop.ThemeColor }}{% endif %}" placeholder="#0068ab">
+            </div>
+            <div class="member-field member-field--full">
+                <label>{% tr 'DecorationBanner' %}</label>
+                <div class="member-upload member-upload--wide" data-upload-shape="wide">
+                    <input type="hidden" name="dec_banner" value="{{ decoration.Banner }}">
+                    <div class="member-upload__box">
+                        <img class="member-upload__img" src="{{ decorationBannerUrl }}" alt=""{% if not decorationBannerUrl %} hidden{% endif %}>
+                        <span class="member-upload__ph"{% if decorationBannerUrl %} hidden{% endif %}><i class="fa fa-plus"></i><em>{% tr 'Upload' %}</em></span>
+                        <button type="button" class="member-upload__del"{% if not decorationBannerUrl %} hidden{% endif %}><i class="fa fa-times"></i></button>
+                    </div>
+                    <input type="file" accept="image/*" hidden>
+                    <p class="member-upload__tip">{% tr 'DecorationBannerTip' %}</p>
+                </div>
+            </div>
+            <div class="member-field member-field--full">
+                <label>{% tr 'DecorationFooter' %}</label>
+                <input type="text" name="dec_footer" value="{{ decoration.Footer }}">
+            </div>
+            <div class="member-field member-field--full">
+                <label>{% tr 'DecorationNotice' %}</label>
+                <label class="member-check"><input type="checkbox" name="dec_show_notice"{% if decoration.ShowNotice %} checked{% endif %}> {% tr 'ShowNotice' %}</label>
+                <input type="text" name="dec_notice" value="{{ decoration.Notice }}" placeholder="{% tr 'ShopNoticePlaceholder' %}">
+            </div>
+        </div>
+        <p class="member-form__tip">{% tr 'DecorationTip' %}</p>
+        <div class="member-form__actions">
+            <button type="button" class="member-btn js-save-decoration">{% tr 'Save' %}</button>
+            <a class="member-btn member-btn--ghost" href="/shop/{{ shop.UserId }}.html" target="_blank">{% tr 'PreviewShop' %}</a>
+        </div>
+    </div>
+
+    <div class="member-pane" data-pane="deposit">
+        <div class="member-deposit">
+            <div class="member-deposit__amount">
+                <span>{% tr 'DepositBalance' %}</span>
+                <b>¥{% if shop.Deposit > 0 %}{{ shop.Deposit|priceFormat }}{% else %}0.00{% endif %}</b>
+                <em>{% tr 'Balance' %} ¥{% if userInfo.Balance > 0 %}{{ userInfo.Balance|priceFormat }}{% else %}0.00{% endif %}</em>
+            </div>
+            <div class="member-deposit__form">
+                <input type="text" id="deposit-amount" placeholder="{% tr 'DepositAmountPlaceholder' %}" inputmode="decimal">
+                <button type="button" class="member-btn js-deposit-pay">{% tr 'PayDeposit' %}</button>
+                <button type="button" class="member-btn member-btn--ghost js-deposit-refund">{% tr 'RefundDeposit' %}</button>
+            </div>
+            <p class="member-form__tip">{% tr 'DepositTip' %}</p>
+        </div>
+
+        {% if depositLogs %}
+        <table class="member-table">
+            <thead>
+                <tr>
+                    <th>{% tr 'Time' %}</th>
+                    <th>{% tr 'Type' %}</th>
+                    <th>{% tr 'Amount' %}</th>
+                    <th>{% tr 'DepositAfter' %}</th>
+                    <th>{% tr 'Remark' %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in depositLogs %}
+                <tr>
+                    <td>{{ item.CreatedTime|dateFormat:"2006-01-02 15:04" }}</td>
+                    <td>{% if item.Type == 1 %}{% tr 'DepositTypePay' %}{% elif item.Type == 2 %}{% tr 'DepositTypeRefund' %}{% else %}{% tr 'DepositTypeDeduct' %}{% endif %}</td>
+                    <td class="{% if item.Amount > 0 %}is-income{% else %}is-expend{% endif %}">{{ item.Amount|priceFormat }}</td>
+                    <td>{{ item.AfterAmount|priceFormat }}</td>
+                    <td class="member-table__remark">{{ item.Remark }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="member-empty">
+            <i class="fa fa-shield"></i>
+            <p>{% tr 'NoDepositLogs' %}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block member_script %}
+<script>
+    (function () {
+        // 页签
+        document.querySelectorAll('.member-tab[data-pane]').forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                var name = tab.getAttribute('data-pane');
+                document.querySelectorAll('.member-tab[data-pane]').forEach(function (t) {
+                    t.classList.toggle('is-active', t === tab);
+                });
+                document.querySelectorAll('.member-pane').forEach(function (pane) {
+                    pane.classList.toggle('is-active', pane.getAttribute('data-pane') === name);
+                });
+            });
+        });
+
+        function val(name) {
+            var el = document.querySelector('[name="' + name + '"]');
+            return el ? el.value.trim() : '';
+        }
+
+        // 图片上传（店铺 Logo / 店铺横幅）：点预览区选图，上传成功把相对路径写回隐藏域
+        document.querySelectorAll('.member-upload').forEach(function (box) {
+            var fileInput = box.querySelector('input[type="file"]');
+            var valueInput = box.querySelector('input[type="hidden"]');
+            var img = box.querySelector('.member-upload__img');
+            var placeholder = box.querySelector('.member-upload__ph');
+            var delBtn = box.querySelector('.member-upload__del');
+            var preview = box.querySelector('.member-upload__box');
+
+            function render(url) {
+                if (url) {
+                    img.src = url;
+                    img.hidden = false;
+                    placeholder.hidden = true;
+                    delBtn.hidden = false;
+                } else {
+                    img.removeAttribute('src');
+                    img.hidden = true;
+                    placeholder.hidden = false;
+                    delBtn.hidden = true;
+                }
+            }
+
+            preview.addEventListener('click', function (e) {
+                if (e.target.closest('.member-upload__del')) {
+                    return;
+                }
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', function () {
+                var file = fileInput.files && fileInput.files[0];
+                fileInput.value = '';
+                if (!file) {
+                    return;
+                }
+                var data = new FormData();
+                data.append('file', file);
+                box.classList.add('is-busy');
+                Member.request('/api/user/upload', { body: data }).then(function (res) {
+                    valueInput.value = res.data.path || '';
+                    render(res.data.url || res.data.thumb || '');
+                }).catch(Member.errorToast).then(function () {
+                    box.classList.remove('is-busy');
+                });
+            });
+
+            delBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                valueInput.value = '';
+                render('');
+            });
+        });
+
+        document.querySelector('.js-save-shop').addEventListener('click', function () {
+            Member.request('/api/shop/save', {
+                body: {
+                    name: val('shop_name'),
+                    contact: val('shop_contact'),
+                    logo: val('shop_logo'),
+                    banner: val('shop_banner'),
+                    intro: val('shop_intro'),
+                    notice: val('shop_notice')
+                }
+            }).then(function () {
+                Member.toast(MEMBER_I18N.saveSuccess);
+            }).catch(Member.errorToast);
+        });
+
+        document.querySelector('.js-save-decoration').addEventListener('click', function () {
+            var showNotice = document.querySelector('[name="dec_show_notice"]').checked;
+            Member.request('/api/shop/save', {
+                body: {
+                    theme_color: val('dec_color'),
+                    decoration: JSON.stringify({
+                        layout: val('dec_layout'),
+                        theme_color: val('dec_color'),
+                        banner: val('dec_banner'),
+                        footer: val('dec_footer'),
+                        show_notice: showNotice,
+                        notice: val('dec_notice'),
+                        modules: ["products", "notice", "contact"]
+                    })
+                }
+            }).then(function () {
+                Member.toast(MEMBER_I18N.saveSuccess);
+            }).catch(Member.errorToast);
+        });
+
+        function depositAmount() {
+            var raw = (document.getElementById('deposit-amount').value || '').trim();
+            if (!/^\d+(\.\d{1,2})?$/.test(raw) || parseFloat(raw) <= 0) {
+                Member.toast(MEMBER_I18N.confirmOperate);
+                return 0;
+            }
+            return Math.round(parseFloat(raw) * 100);
+        }
+
+        document.querySelector('.js-deposit-pay').addEventListener('click', function () {
+            var amount = depositAmount();
+            if (!amount) {
+                return;
+            }
+            if (!confirm(MEMBER_I18N.confirmOperate)) {
+                return;
+            }
+            Member.request('/api/shop/deposit/pay', { body: { amount: amount } }).then(function () {
+                Member.toast(MEMBER_I18N.saveSuccess);
+                setTimeout(function () { location.reload(); }, 800);
+            }).catch(Member.errorToast);
+        });
+
+        document.querySelector('.js-deposit-refund').addEventListener('click', function () {
+            var amount = depositAmount();
+            if (!amount) {
+                return;
+            }
+            if (!confirm(MEMBER_I18N.confirmOperate)) {
+                return;
+            }
+            Member.request('/api/shop/deposit/refund', { body: { amount: amount } }).then(function () {
+                Member.toast(MEMBER_I18N.saveSuccess);
+                setTimeout(function () { location.reload(); }, 800);
+            }).catch(Member.errorToast);
+        });
+    })();
+</script>
+{% endblock %}

@@ -1,5 +1,9 @@
 {% extends 'base.html' %}
 
+{% block head %}
+<link rel="stylesheet" type="text/css" href="{% system with name='TemplateUrl' %}css/shop.css" />
+{% endblock %}
+
 {% block container %}
 
 {% include "partial/banner.html" %}
@@ -17,6 +21,14 @@
                 <h1>{% archiveDetail with name="Title" %}</h1>
                 <p>{% archiveDetail with name="Description" %}</p>
                 <a href="tel:{% contact with name='Cellphone' %}" rel="nofollow" class="more"><span>{% tr 'contact-number' %}</span>: {% contact with name="Cellphone" %}</a>
+                <div class="pro-actions">
+                    <button type="button" class="pro-btn pro-btn--cart js-add-cart" data-id="{% archiveDetail with name='Id' %}">
+                        <i class="fa fa-shopping-cart"></i> {% tr 'AddToCart' %}
+                    </button>
+                    <button type="button" class="pro-btn js-favorite" data-id="{% archiveDetail with name='Id' %}">
+                        <i class="fa fa-star-o"></i> {% tr 'MyFavorites' %}
+                    </button>
+                </div>
             </div>
         </div>
         <!-- toppro -->

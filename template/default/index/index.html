@@ -14,18 +14,6 @@
     {% endbannerList %}
 </div>
 <!-- slider -->
-<!-- ind-tag -->
-<div class="ind-tag">
-    <div class="container">
-        <span>{% tr 'hot-search:' %}</span>
-        {% archiveList products with type="list" flag="c" moduleId="2" limit="5" %}
-        {% for item in products %}
-        <a href="{{item.Link}}">{{item.Title}}</a>
-        {% endfor %}
-        {% endarchiveList %}
-    </div>
-</div>
-<!-- ind-tag -->
 <!-- layout -->
 <!-- ind-pro -->
 <div class="section ind-pro">

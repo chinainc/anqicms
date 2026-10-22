@@ -999,7 +999,7 @@ func ApiPlaceDetail(ctx iris.Context) {
 	if currentSite.PluginPlace.Open == false {
 		ctx.JSON(iris.Map{
 			"code": config.StatusFailed,
-			"msg":  ctx.Tr("NotOpen"),
+			"msg":  provider.CurrentSite(ctx).TplTr("NotOpen"),
 		})
 		return
 	}
@@ -1038,7 +1038,7 @@ func ApiPlaceList(ctx iris.Context) {
 	if currentSite.PluginPlace.Open == false {
 		ctx.JSON(iris.Map{
 			"code": config.StatusFailed,
-			"msg":  ctx.Tr("NotOpen"),
+			"msg":  provider.CurrentSite(ctx).TplTr("NotOpen"),
 		})
 		return
 	}
@@ -1406,8 +1406,24 @@ func ApiArchivePublish(ctx iris.Context) {
 			req.Draft = !group.Setting.ContentNoVerify
 		}
 	}
+	// 会员端「存草稿」：显式要求保存为草稿，优先于上面的审核设置
+	if req.ForceDraft {
+		req.Draft = true
+	}
 	userId := ctx.Values().GetIntDefault("userId", 0)
 	req.UserId = uint(userId)
+	// 会员只能编辑自己的内容：带 id 时校验归属。
+	// SaveArchive 自身不看 user_id，若不在这里拦，换个 id 就能改别人的文档。
+	// 该 id 下不存在内容时放行（SaveArchive 按新建处理，供程序化调用兼容）。
+	if req.Id > 0 {
+		if owner, exist := currentSite.GetArchiveOwner(req.Id); exist && owner != req.UserId {
+			ctx.JSON(iris.Map{
+				"code": config.StatusFailed,
+				"msg":  currentSite.Tr("NoPermissionToOperateThisContent"),
+			})
+			return
+		}
+	}
 	req.Extra = map[string]interface{}{}
 	// read body twice
 	var extraReq = map[string]interface{}{}
@@ -1454,6 +1470,65 @@ func ApiArchivePublish(ctx iris.Context) {
 		"code": config.StatusOK,
 		"msg":  msg,
 		"data": archive,
+	})
+}
+
+// ApiArchiveDelete 会员删除自己发布的内容。
+//
+// 正式内容走 DeleteArchive（移入 archive_drafts 并标记 status=99，
+// 后台回收站仍可恢复），草稿直接删除。只允许操作本人内容。
+func ApiArchiveDelete(ctx iris.Context) {
+	currentSite := provider.CurrentSite(ctx)
+
+	var req struct {
+		Id int64 `json:"id"`
+	}
+	if err := ctx.ReadJSON(&req); err != nil {
+		// 兼容表单提交
+		req.Id = int64(ctx.PostValueIntDefault("id", 0))
+	}
+	if req.Id <= 0 {
+		ctx.JSON(iris.Map{
+			"code": config.StatusFailed,
+			"msg":  currentSite.Tr("DocumentDoesNotExist"),
+		})
+		return
+	}
+
+	userId := ctx.Values().GetUintDefault("userId", 0)
+	owner, exist := currentSite.GetArchiveOwner(req.Id)
+	if !exist {
+		ctx.JSON(iris.Map{
+			"code": config.StatusFailed,
+			"msg":  currentSite.Tr("DocumentDoesNotExist"),
+		})
+		return
+	}
+	if owner != userId {
+		ctx.JSON(iris.Map{
+			"code": config.StatusFailed,
+			"msg":  currentSite.Tr("NoPermissionToOperateThisContent"),
+		})
+		return
+	}
+
+	var err error
+	if archive, getErr := currentSite.GetArchiveById(req.Id); getErr == nil {
+		err = currentSite.DeleteArchive(archive)
+	} else if draft, getErr := currentSite.GetArchiveDraftById(req.Id); getErr == nil {
+		err = currentSite.DeleteArchiveDraft(draft)
+	}
+	if err != nil {
+		ctx.JSON(iris.Map{
+			"code": config.StatusFailed,
+			"msg":  err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(iris.Map{
+		"code": config.StatusOK,
+		"msg":  currentSite.Tr("DeleteSuccessful"),
 	})
 }
 

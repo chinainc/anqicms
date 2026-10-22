@@ -40,6 +40,12 @@ func Register(app *iris.Application) {
 	app.HandleMany(iris.MethodGet, "/login /login/{platform:string}", controller.LoginPage)
 	app.HandleMany(iris.MethodGet, "/register /register/{platform:string}", controller.RegisterPage)
 	app.Get("/logout", middleware.ParseUserToken, controller.AccountLogout)
+	app.Get("/forget", controller.ForgetPasswordPage)
+	// 店铺主页（页头登录态交给模板的公共部分，避免额外中间件开销）
+	app.Get("/shop/{id:string}", controller.ShopPage)
+	// 会员中心
+	app.Get("/member", middleware.ParseUserToken, controller.MemberPage)
+	app.Get("/member/{route:path}", middleware.ParseUserToken, controller.MemberPage)
 	// account party
 	app.Get("/account/password/reset", controller.AccountPasswordResetPage)
 	app.Get("/account/{route:path}", middleware.ParseUserToken, controller.AccountIndexPage)
@@ -105,6 +111,8 @@ func Register(app *iris.Application) {
 		api.Post("/favorite/delete", middleware.UserAuth, controller.ApiDeleteFavorite)
 		// 发布文档
 		api.Post("/archive/publish", middleware.UserAuth, controller.ApiArchivePublish)
+		// 删除自己发布的内容
+		api.Post("/archive/delete", middleware.UserAuth, controller.ApiArchiveDelete)
 		// common api
 		api.Get("/archive/detail", controller.CheckApiOpen, middleware.HandlerTimeout, controller.ApiArchiveDetail)
 		api.Get("/archive/filters", controller.CheckApiOpen, middleware.HandlerTimeout, controller.ApiArchiveFilters)
@@ -139,6 +147,52 @@ func Register(app *iris.Application) {
 		api.Post("/comment/praise", controller.CheckApiOpen, middleware.UserAuth, controller.ApiCommentPraise)
 		api.Post("/guestbook.html", controller.CheckApiOpen, controller.ApiGuestbookForm)
 		api.Post("/subscription", controller.CheckApiOpen, controller.ApiAddSubscriber)
+
+		// 会员商城：购物车 / 积分 / 签到 / 店铺 / 保证金 / 已售订单 / 收到的评价 / 资金流水
+		// 都是当前登录用户自己的数据，只做登录校验（UserAuth），不走 API 开关
+		api.Get("/cart/list", middleware.UserAuth, controller.ApiCartList)
+		api.Post("/cart/add", middleware.UserAuth, controller.ApiCartAdd)
+		api.Post("/cart/update", middleware.UserAuth, controller.ApiCartUpdate)
+		api.Post("/cart/delete", middleware.UserAuth, controller.ApiCartDelete)
+		api.Post("/cart/clear", middleware.UserAuth, controller.ApiCartClear)
+		api.Post("/cart/checkout", middleware.UserAuth, controller.ApiCartCheckout)
+
+		api.Get("/point/logs", middleware.UserAuth, controller.ApiPointLogs)
+		api.Get("/sign/info", middleware.UserAuth, controller.ApiSignInfo)
+		api.Post("/sign/do", middleware.UserAuth, controller.ApiSignDo)
+
+		api.Get("/shop/info", middleware.UserAuth, controller.ApiShopInfo)
+		api.Post("/shop/save", middleware.UserAuth, controller.ApiShopSave)
+		api.Get("/shop/deposit/logs", middleware.UserAuth, controller.ApiShopDepositLogs)
+		api.Post("/shop/deposit/pay", middleware.UserAuth, controller.ApiShopDepositPay)
+		api.Post("/shop/deposit/refund", middleware.UserAuth, controller.ApiShopDepositRefund)
+		api.Get("/shop/sales", middleware.UserAuth, controller.ApiShopSales)
+		api.Get("/shop/reviews", middleware.UserAuth, controller.ApiShopReviews)
+
+		api.Get("/user/archives", middleware.UserAuth, controller.ApiUserArchives)
+		api.Get("/user/finances", middleware.UserAuth, controller.ApiUserFinances)
+		// 发布内容时的图片上传（封面 / 图集 / 正文插图）
+		api.Post("/user/upload", middleware.UserAuth, controller.ApiUserUploadImage)
+
+		// 会员中心：评论管理（自己发布的文档收到的评论）
+		api.Post("/user/comment/status", middleware.UserAuth, controller.ApiUserCommentStatus)
+		api.Post("/user/comment/delete", middleware.UserAuth, controller.ApiUserCommentDelete)
+		api.Post("/user/comment/reply", middleware.UserAuth, controller.ApiUserCommentReply)
+		// 会员中心：评论 / 留言（列表同时供开放接口与 CLI 使用）
+		api.Get("/user/archive", middleware.UserAuth, controller.ApiUserArchiveDetail)
+		api.Get("/user/comments", middleware.UserAuth, controller.ApiUserComments)
+		api.Get("/user/guestbooks", middleware.UserAuth, controller.ApiUserGuestbooks)
+		// 会员中心：留言管理
+		api.Post("/user/guestbook/delete", middleware.UserAuth, controller.ApiUserGuestbookDelete)
+		// 会员中心：实名 / 企业认证
+		api.Get("/user/auth/info", middleware.UserAuth, controller.ApiUserAuthInfo)
+		api.Post("/user/auth/apply", middleware.UserAuth, controller.ApiUserAuthApply)
+		// 会员中心：开放接口（API Key，REST / MCP / CLI 共用）
+		api.Get("/user/openapi/info", middleware.UserAuth, controller.ApiMemberOpenApiInfo)
+		api.Post("/user/openapi/token", middleware.UserAuth, controller.ApiMemberOpenApiToken)
+		// 会员中心：余额提现 / 账户充值（金额单位：分）
+		api.Post("/user/withdraw", middleware.UserAuth, controller.ApiUserWithdrawApply)
+		api.Post("/user/recharge", middleware.UserAuth, controller.ApiUserRechargeApply)
 	}
 
 	notify := app.Party("/notify")
@@ -160,4 +214,7 @@ func Register(app *iris.Application) {
 
 	// MCP 对外端点：按域名解析站点 + Bearer token 鉴权
 	app.Any("/api/mcp", middleware.McpTokenAuth, controller.McpStreamableHTTP)
+
+	// 会员开放接口 MCP：用会员自己的 API Key 鉴权，工具只覆盖本人数据
+	app.Any("/api/open/mcp", middleware.OpenApiTokenAuth, controller.MemberMcpHTTP)
 }

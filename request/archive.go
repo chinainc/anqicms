@@ -39,7 +39,8 @@ type Archive struct {
 	RemoveFlag        bool `json:"-"` // 是否删除flag
 	RemoveRelationIds bool `json:"-"` // 是否删除关联文档
 
-	ForceSave bool `json:"force_save"` // 在标题冲突时，是否强制保存
+	ForceSave  bool `json:"force_save"`  // 在标题冲突时，是否强制保存
+	ForceDraft bool `json:"force_draft"` // 强制保存为草稿（会员端「存草稿」按钮，优先于审核设置）
 	QuickSave bool `json:"quick_save"` // 是否是快速保存，快速保存模式下仅处理标题、关键词、描述、分类、图片、标签、标记、内容
 	UpdateAll bool `json:"update_all" ast:"-"`
 	// Partial 走 PATCH 语义：只覆盖显式传入的字段，未传的一律保持原值。

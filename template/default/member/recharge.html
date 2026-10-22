@@ -1,0 +1,119 @@
+{% extends 'member/layout.html' %}
+
+{% block member_title %}{% tr 'AccountRecharge' %}{% endblock %}
+
+{% block member %}
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'AccountRecharge' %}</h3>
+        <span class="member-panel__more">{% tr 'Balance' %}：{% if userInfo.Balance > 0 %}{{ userInfo.Balance|priceFormat }}{% else %}0.00{% endif %}</span>
+    </div>
+
+    <div class="member-fields">
+        <div class="member-field">
+            <label>{% tr 'RechargeAmount' %}</label>
+            <input type="text" id="recharge-amount" placeholder="{% tr 'RechargeAmountPlaceholder' %}" inputmode="decimal">
+        </div>
+        <div class="member-field">
+            <label>{% tr 'PayWay' %}</label>
+            <select id="recharge-payway">
+                <option value="支付宝">{% tr 'PayWayAlipay' %}</option>
+                <option value="微信">{% tr 'PayWayWechat' %}</option>
+                <option value="银行转账">{% tr 'PayWayBank' %}</option>
+            </select>
+        </div>
+        <div class="member-field member-field--full">
+            <label>{% tr 'RechargeRemark' %}</label>
+            <input type="text" id="recharge-remark" placeholder="{% tr 'RechargeRemarkPlaceholder' %}">
+        </div>
+    </div>
+
+    <p class="member-form__tip">{% tr 'RechargeTip' %}</p>
+
+    <div class="member-form__actions">
+        <button type="button" class="member-btn js-recharge-apply">{% tr 'SubmitRecharge' %}</button>
+        <a class="member-btn member-btn--ghost" href="/member/finance">{% tr 'MyFinances' %}</a>
+    </div>
+</div>
+
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'RechargeRecords' %}</h3>
+    </div>
+
+    {% if recharges %}
+    <table class="member-table">
+        <thead>
+            <tr>
+                <th>{% tr 'Time' %}</th>
+                <th>{% tr 'Amount' %}</th>
+                <th>{% tr 'PayWay' %}</th>
+                <th>{% tr 'Remark' %}</th>
+                <th>{% tr 'Status' %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in recharges %}
+            <tr>
+                <td>{{ item.CreatedText }}</td>
+                <td class="is-income">{{ item.Amount|priceFormat }}</td>
+                <td>{{ item.PayWay }}</td>
+                <td class="member-table__remark">{{ item.Remark }}</td>
+                <td><span class="member-badge member-badge--{{ item.StatusClass }}">{{ item.StatusText }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if pager.TotalPage > 1 %}
+    <div class="member-pager">
+        {% if pager.PrevLink %}<a class="member-pager__link" href="{{ pager.PrevLink }}">{% tr 'PrevPage' %}</a>{% endif %}
+        {% for link in pager.Links %}
+            {% if link.Current %}
+            <span class="member-pager__link is-current">{{ link.Page }}</span>
+            {% else %}
+            <a class="member-pager__link" href="{{ link.Link }}">{{ link.Page }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if pager.NextLink %}<a class="member-pager__link" href="{{ pager.NextLink }}">{% tr 'NextPage' %}</a>{% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="member-empty">
+        <i class="fa fa-plus-circle"></i>
+        <p>{% tr 'NoRechargeRecords' %}</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block member_script %}
+<script>
+    (function () {
+        document.querySelector('.js-recharge-apply').addEventListener('click', function () {
+            var btn = this;
+            var raw = (document.getElementById('recharge-amount').value || '').trim();
+            if (!/^\d+(\.\d{1,2})?$/.test(raw) || parseFloat(raw) <= 0) {
+                Member.toast(MEMBER_I18N.enterAmount);
+                return;
+            }
+            if (!confirm(MEMBER_I18N.confirmOperate)) {
+                return;
+            }
+            btn.disabled = true;
+            Member.post('/api/user/recharge', {
+                amount: Math.round(parseFloat(raw) * 100),
+                pay_way: document.getElementById('recharge-payway').value,
+                remark: (document.getElementById('recharge-remark').value || '').trim()
+            }).then(function (res) {
+                Member.toast(res.msg || MEMBER_I18N.saveSuccess);
+                setTimeout(function () { location.reload(); }, 800);
+            }).catch(function (err) {
+                btn.disabled = false;
+                Member.errorToast(err);
+            });
+        });
+    })();
+</script>
+{% endblock %}

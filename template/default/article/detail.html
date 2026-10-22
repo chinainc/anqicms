@@ -1,5 +1,9 @@
 {% extends 'base.html' %}
 
+{% block head %}
+<link rel="stylesheet" type="text/css" href="{% system with name='TemplateUrl' %}css/shop.css" />
+{% endblock %}
+
 {% block container %}
 
 {% include "partial/banner.html" %}
@@ -16,6 +20,9 @@
                     <div class="info">
                         <span>{% tr 'source:' %}<a href="{% categoryDetail with name='Link' %}">{% categoryDetail with name='Title' %}</a></span> /
                         <span><span>{% tr 'time:' %}</span>{% archiveDetail with name="CreatedTime" format="2006-01-02" %}</span>
+                        <button type="button" class="pro-btn pro-btn--mini js-favorite" data-id="{% archiveDetail with name='Id' %}">
+                            <i class="fa fa-star-o"></i> {% tr 'MyFavorites' %}
+                        </button>
                     </div>
                 </div>
                 <div class="single-arc markdown-body">

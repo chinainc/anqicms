@@ -1,6 +1,6 @@
 package config
 
-const Version = "3.6.7"
+const Version = "3.6.8"
 const Trial = false
 const VersionType = ""
 
@@ -111,6 +111,7 @@ const (
 	FinanceActionSpread     = 6
 	FinanceActionCashBack   = 7
 	FinanceActionCommission = 8
+	FinanceActionDeposit    = 9 // 店铺保证金缴纳/退还
 )
 
 const (

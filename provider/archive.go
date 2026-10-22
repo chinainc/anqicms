@@ -194,6 +194,22 @@ func (w *Website) GetArchiveDraftById(id int64) (*model.ArchiveDraft, error) {
 	})
 }
 
+// GetArchiveOwner 取文档作者：先查正式表，再查草稿表。
+// 第二个返回值为 false 表示该 ID 下没有任何内容（调用方按「新建」处理）。
+// 会员端编辑/删除内容前必须用它校验归属，否则换个 id 就能改别人的文章。
+func (w *Website) GetArchiveOwner(id int64) (uint, bool) {
+	if id <= 0 {
+		return 0, false
+	}
+	if archive, err := w.GetArchiveById(id); err == nil && archive != nil {
+		return archive.UserId, true
+	}
+	if draft, err := w.GetArchiveDraftById(id); err == nil && draft != nil {
+		return draft.UserId, true
+	}
+	return 0, false
+}
+
 func (w *Website) GetArchiveDraftByTitle(title string) (*model.ArchiveDraft, error) {
 	return w.GetArchiveDraftByFunc(func(tx *gorm.DB) *gorm.DB {
 		return tx.Where("`title` = ?", title)

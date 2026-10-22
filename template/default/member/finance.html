@@ -1,0 +1,74 @@
+{% extends 'member/layout.html' %}
+
+{% block member_title %}{% tr 'MyFinances' %}{% endblock %}
+
+{% block member %}
+<div class="member-stats member-stats--2">
+    <div class="member-stat">
+        <div class="member-stat__icon"><i class="fa fa-cny"></i></div>
+        <div class="member-stat__body">
+            <div class="member-stat__label">{% tr 'Balance' %}</div>
+            <div class="member-stat__value">{% if userInfo.Balance > 0 %}{{ userInfo.Balance|priceFormat }}{% else %}0.00{% endif %}</div>
+        </div>
+    </div>
+    <div class="member-stat">
+        <div class="member-stat__icon"><i class="fa fa-gift"></i></div>
+        <div class="member-stat__body">
+            <div class="member-stat__label">{% tr 'TotalReward' %}</div>
+            <div class="member-stat__value">{% if userInfo.TotalReward > 0 %}{{ userInfo.TotalReward|priceFormat }}{% else %}0.00{% endif %}</div>
+        </div>
+    </div>
+</div>
+
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'FinanceLogs' %}</h3>
+    </div>
+    {% if logs %}
+    <table class="member-table">
+        <thead>
+            <tr>
+                <th>{% tr 'Time' %}</th>
+                <th>{% tr 'Type' %}</th>
+                <th>{% tr 'Amount' %}</th>
+                <th>{% tr 'BalanceAfter' %}</th>
+                <th>{% tr 'Remark' %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in logs %}
+            <tr>
+                <td>{{ item.CreatedTime|dateFormat:"2006-01-02 15:04" }}</td>
+                <td>{% if item.Action == 1 %}{% tr 'FinanceSale' %}{% elif item.Action == 2 %}{% tr 'FinanceBuy' %}{% elif item.Action == 3 %}{% tr 'FinanceRefund' %}{% elif item.Action == 4 %}{% tr 'FinanceCharge' %}{% elif item.Action == 5 %}{% tr 'FinanceWithdraw' %}{% elif item.Action == 6 %}{% tr 'FinanceSpread' %}{% elif item.Action == 7 %}{% tr 'FinanceCashBack' %}{% elif item.Action == 8 %}{% tr 'FinanceCommission' %}{% elif item.Action == 9 %}{% tr 'FinanceDeposit' %}{% else %}{% tr 'FinanceOther' %}{% endif %}</td>
+                <td class="{% if item.Direction == 1 %}is-income{% else %}is-expend{% endif %}">
+                    {% if item.Direction == 1 %}+{% else %}-{% endif %}{{ item.Amount|priceFormat }}
+                </td>
+                <td>{{ item.AfterAmount|priceFormat }}</td>
+                <td class="member-table__remark">{{ item.Remark }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if pager.TotalPage > 1 %}
+    <div class="member-pager">
+        {% if pager.PrevLink %}<a class="member-pager__link" href="{{ pager.PrevLink }}">{% tr 'PrevPage' %}</a>{% endif %}
+        {% for link in pager.Links %}
+            {% if link.Current %}
+            <span class="member-pager__link is-current">{{ link.Page }}</span>
+            {% else %}
+            <a class="member-pager__link" href="{{ link.Link }}">{{ link.Page }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if pager.NextLink %}<a class="member-pager__link" href="{{ pager.NextLink }}">{% tr 'NextPage' %}</a>{% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="member-empty">
+        <i class="fa fa-cny"></i>
+        <p>{% tr 'NoFinanceLogs' %}</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

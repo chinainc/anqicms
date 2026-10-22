@@ -2,6 +2,7 @@ package manageController
 
 import (
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"strconv"
@@ -19,6 +20,22 @@ import (
 	"kandaoni.com/anqicms/request"
 	"kandaoni.com/anqicms/response"
 )
+
+// setAdminTokenCookie 登录成功后把令牌同时写入 cookie。
+// 后台的独立页面（不经过 SPA，拿不到 Admin 请求头）用它作为同源兜底凭据：
+// 路径限定 /system，HttpOnly + SameSite=Lax，避免被跨站表单滥用。
+func setAdminTokenCookie(ctx iris.Context, token string) {
+	if token == "" {
+		return
+	}
+	ctx.SetCookie(&http.Cookie{
+		Name:     "admin_token",
+		Value:    token,
+		Path:     "/system",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
 
 // AdminLogin 管理员登录，验证账号密码（支持验证码和签名登录），成功后返回带 token 的管理员信息。
 func AdminLogin(ctx iris.Context) {
@@ -110,6 +127,8 @@ func AdminLogin(ctx iris.Context) {
 		}
 		currentSite.DB.Create(&adminLog)
 		admin.SiteId = currentSite.Id
+
+		setAdminTokenCookie(ctx, admin.Token)
 
 		ctx.JSON(iris.Map{
 			"code": config.StatusOK,
@@ -241,6 +260,7 @@ func AdminLogin(ctx iris.Context) {
 	// 更新token
 	admin.Token = currentSite.GetAdminAuthToken(admin.Id, req.Remember)
 	admin.IsSuper = currentSite.Id == 1 && admin.GroupId == 1
+	setAdminTokenCookie(ctx, admin.Token)
 	// 记录用户登录时间
 	currentSite.DB.Model(admin).UpdateColumn("login_time", time.Now().Unix())
 

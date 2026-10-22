@@ -1,0 +1,81 @@
+{% extends 'member/layout.html' %}
+
+{% block member_title %}{% tr 'MyFavorites' %}{% endblock %}
+
+{% block member %}
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'MyFavorites' %}<span class="member-panel__count">{{ favoriteCount }}</span></h3>
+    </div>
+
+    {% if favorites %}
+    <ul class="member-fav-list">
+        {% for item in favorites %}
+        <li class="member-fav" data-archive="{{ item.Id }}">
+            <a class="member-fav__thumb" href="{{ item.Link }}">
+                {% if item.Thumb %}
+                <img src="{{ item.Thumb }}" alt="{{ item.Title }}">
+                {% else %}
+                <i class="fa fa-file-text-o"></i>
+                {% endif %}
+            </a>
+            <div class="member-fav__body">
+                <a class="member-fav__title" href="{{ item.Link }}">{{ item.Title }}</a>
+                {% if item.Description %}
+                <p class="member-fav__desc">{{ item.Description|truncatechars:80 }}</p>
+                {% endif %}
+                <div class="member-fav__meta">
+                    <span>{{ item.CreatedTime|dateFormat:"2006-01-02" }}</span>
+                    <a href="javascript:;" class="member-fav__remove js-fav-remove">{% tr 'Remove' %}</a>
+                </div>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+
+    {% if pager.TotalPage > 1 %}
+    <div class="member-pager">
+        {% if pager.PrevLink %}<a class="member-pager__link" href="{{ pager.PrevLink }}">{% tr 'PrevPage' %}</a>{% endif %}
+        {% for link in pager.Links %}
+            {% if link.Current %}
+            <span class="member-pager__link is-current">{{ link.Page }}</span>
+            {% else %}
+            <a class="member-pager__link" href="{{ link.Link }}">{{ link.Page }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if pager.NextLink %}<a class="member-pager__link" href="{{ pager.NextLink }}">{% tr 'NextPage' %}</a>{% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="member-empty">
+        <i class="fa fa-star-o"></i>
+        <p>{% tr 'NoFavorites' %}</p>
+        <a class="member-btn member-btn--ghost" href="/">{% tr 'GoShopping' %}</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block member_script %}
+<script>
+    (function () {
+        var list = document.querySelectorAll('.js-fav-remove');
+        Array.prototype.forEach.call(list, function (btn) {
+            btn.addEventListener('click', function () {
+                if (!confirm(MEMBER_I18N.confirmRemove)) {
+                    return;
+                }
+                var wrapper = btn.closest('.member-fav');
+                var archiveId = parseInt(wrapper.getAttribute('data-archive'), 10);
+                Member.request('/api/favorite/delete', { body: { archive_id: archiveId } }).then(function () {
+                    wrapper.parentNode.removeChild(wrapper);
+                    if (!document.querySelector('.member-fav')) {
+                        location.reload();
+                    }
+                }).catch(Member.errorToast);
+            });
+        });
+    })();
+</script>
+{% endblock %}

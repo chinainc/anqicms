@@ -1,0 +1,356 @@
+{% extends 'member/layout.html' %}
+
+{% block member_title %}{% if editArchive %}{% tr 'EditContent' %}{% else %}{% tr 'PublishContent' %}{% endif %}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" type="text/css" href="{% system with name='TemplateUrl' %}css/member.css" />
+<link rel="stylesheet" type="text/css" href="{% system with name='TemplateUrl' %}css/editor.css" />
+{% endblock %}
+
+{% block member %}
+<form class="publish" id="publish-form" autocomplete="off">
+    {% if editArchive %}<input type="hidden" name="id" value="{{ editArchive.Id }}">{% endif %}
+    {% if editArchive %}<textarea id="edit-content" hidden>{{ editArchive.Content }}</textarea>{% endif %}
+    <div class="publish-layout">
+        <div class="publish-main">
+            <div class="member-panel">
+                <div class="member-panel__head">
+                    <h3>{% if editArchive %}{% tr 'EditContent' %}{% else %}{% tr 'PublishContent' %}{% endif %}</h3>
+                    <a class="member-panel__more" href="/member/published">{% tr 'MyPublished' %}</a>
+                </div>
+
+                <div class="member-field">
+                    <label>{% tr 'Title' %}</label>
+                    <input type="text" name="title" placeholder="{% tr 'TitlePlaceholder' %}" maxlength="120" value="{% if editArchive %}{{ editArchive.Title }}{% endif %}">
+                </div>
+
+                <div class="member-field">
+                    <label>{% tr 'RecommendFlags' %}</label>
+                    <div class="publish-flags">
+                        {% for item in flagOptions %}
+                        <label class="publish-flag">
+                            <input type="checkbox" name="flag" value="{{ item.Flag }}"{% if editArchive and item.Flag in editArchive.Flags %} checked{% endif %}> {{ item.Title }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="member-field">
+                    <label>{% tr 'Keywords' %}</label>
+                    <input type="text" name="keywords" placeholder="{% tr 'KeywordsPlaceholder' %}" value="{% if editArchive %}{{ editArchive.Keywords }}{% endif %}">
+                </div>
+
+                <div class="member-field">
+                    <label>
+                        {% tr 'Description' %}
+                        <button type="button" class="member-link-btn" id="extract-summary">{% tr 'ExtractSummary' %}</button>
+                    </label>
+                    <textarea name="description" rows="3" placeholder="{% tr 'DescriptionPlaceholder' %}">{% if editArchive %}{{ editArchive.Description }}{% endif %}</textarea>
+                </div>
+
+                <div class="member-field">
+                    <label>{% tr 'Content' %}</label>
+                    <div class="mz-editor" id="content-editor" data-upload="/api/user/upload"></div>
+                </div>
+            </div>
+        </div>
+
+        <aside class="publish-side">
+            <div class="member-panel">
+                <div class="member-panel__head">
+                    <h3>{% tr 'Category' %}</h3>
+                </div>
+                <div class="member-field">
+                    <label>{% tr 'ContentType' %}</label>
+                    <div class="publish-seg" id="publish-module-seg">
+                        <label class="publish-seg__item">
+                            <input type="radio" name="module_pick" value="{{ articleModuleId }}"{% if not editArchive or editArchive.ModuleId != productModuleId %} checked{% endif %}>
+                            <span><i class="fa fa-file-text-o"></i> {% tr 'Article' %}</span>
+                        </label>
+                        <label class="publish-seg__item">
+                            <input type="radio" name="module_pick" value="{{ productModuleId }}"{% if editArchive and editArchive.ModuleId == productModuleId %} checked{% endif %}>
+                            <span><i class="fa fa-cube"></i> {% tr 'Product' %}</span>
+                        </label>
+                    </div>
+                    <select name="module_id" id="publish-module" hidden>
+                        <option value="{{ articleModuleId }}"{% if editArchive and editArchive.ModuleId == articleModuleId %} selected{% endif %}>{% tr 'Article' %}</option>
+                        <option value="{{ productModuleId }}"{% if editArchive and editArchive.ModuleId == productModuleId %} selected{% endif %}>{% tr 'Product' %}</option>
+                    </select>
+                </div>
+                <div class="member-field">
+                    <label>{% tr 'Category' %}<em class="publish-required">*</em></label>
+                    <select name="category_id" id="publish-category-article">
+                        {% if not articleCategories %}<option value="">{% tr 'NoCategoryAvailable' %}</option>{% endif %}
+                        {% for item in articleCategories %}
+                        <option value="{{ item.Id }}"{% if editArchive and editArchive.CategoryId == item.Id %} selected{% endif %}>{% if item.Depth == 1 %}&nbsp;&nbsp;{% endif %}{% if item.Depth == 2 %}&nbsp;&nbsp;&nbsp;&nbsp;{% endif %}{{ item.Title }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="category_id" id="publish-category-product" hidden>
+                        {% if not productCategories %}<option value="">{% tr 'NoCategoryAvailable' %}</option>{% endif %}
+                        {% for item in productCategories %}
+                        <option value="{{ item.Id }}"{% if editArchive and editArchive.CategoryId == item.Id %} selected{% endif %}>{% if item.Depth == 1 %}&nbsp;&nbsp;{% endif %}{% if item.Depth == 2 %}&nbsp;&nbsp;&nbsp;&nbsp;{% endif %}{{ item.Title }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="publish-hint">{% tr 'CategoryChooseTip' %}</p>
+                </div>
+                <div class="member-field product-only" hidden>
+                    <label>{% tr 'Price' %}</label>
+                    <input type="text" name="price" placeholder="{% tr 'PricePlaceholder' %}" inputmode="decimal" value="{% if editArchive and editArchive.Price != '0.00' %}{{ editArchive.Price }}{% endif %}">
+                </div>
+                <div class="member-field product-only" hidden>
+                    <label>{% tr 'Stock' %}</label>
+                    <input type="text" name="stock" value="{% if editArchive %}{{ editArchive.Stock }}{% else %}100{% endif %}" inputmode="numeric">
+                </div>
+            </div>
+
+            <div class="member-panel">
+                <div class="member-panel__head">
+                    <h3>{% tr 'DocumentImages' %}</h3>
+                </div>
+                <div class="publish-images" id="publish-images">
+                    {% if editArchive %}
+                    {% for img in editArchive.Images %}
+                    <span class="publish-image-seed" hidden data-path="{{ img.Path }}" data-url="{{ img.Url }}"></span>
+                    {% endfor %}
+                    {% endif %}
+                    <label class="publish-image-add" title="{% tr 'AddImage' %}">
+                        <b class="publish-image-add__plus">+</b>
+                        <span>{% tr 'Upload' %}</span>
+                        <input type="file" accept="image/*" multiple hidden id="image-input">
+                    </label>
+                </div>
+                <p class="member-form__tip">{% tr 'DocumentImagesTip' %}</p>
+            </div>
+
+            <div class="member-panel">
+                <div class="member-field">
+                    <label>{% tr 'UrlToken' %}</label>
+                    <input type="text" name="url_token" placeholder="{% tr 'UrlTokenPlaceholder' %}" value="{% if editArchive %}{{ editArchive.UrlToken }}{% endif %}">
+                </div>
+                <div class="member-field">
+                    <label>{% tr 'PublishTime' %}</label>
+                    <input type="datetime-local" name="created_time" value="{% if editArchive %}{{ editArchive.CreatedTime }}{% endif %}">
+                </div>
+                <div class="member-field">
+                    <label>{% tr 'Tags' %}</label>
+                    <input type="text" name="tags" placeholder="{% tr 'TagsPlaceholder' %}" value="{% if editArchive %}{{ editArchive.Tags }}{% endif %}">
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    {% if not canPublishDirectly %}
+    <p class="member-form__tip">{% tr 'PublishNeedReviewTip' %}</p>
+    {% endif %}
+
+    <div class="publish-actions">
+        <button type="submit" class="member-btn" data-draft="0">{% if editArchive %}{% tr 'Save' %}{% else %}{% tr 'Submit' %}{% endif %}</button>
+        <button type="button" class="member-btn member-btn--ghost" id="save-draft">{% tr 'SaveDraft' %}</button>
+        <a class="member-btn member-btn--ghost" href="/member/published">{% tr 'Back' %}</a>
+    </div>
+</form>
+{% endblock %}
+
+{% block member_script %}
+<script src="{% system with name='TemplateUrl' %}js/editor.js" type="text/javascript"></script>
+<script>
+    (function () {
+        var form = document.getElementById('publish-form');
+        var moduleSelect = document.getElementById('publish-module');
+        var moduleRadios = document.querySelectorAll('#publish-module-seg input[name="module_pick"]');
+        var articleCat = document.getElementById('publish-category-article');
+        var productCat = document.getElementById('publish-category-product');
+        var productOnly = document.querySelectorAll('.product-only');
+        var imageBox = document.getElementById('publish-images');
+        var imageInput = document.getElementById('image-input');
+        var editor = new MemberEditor(document.getElementById('content-editor'), {
+            uploadUrl: '/api/user/upload',
+            placeholder: "{% tr 'ContentPlaceholder' %}"
+        });
+        var images = [];
+
+        // 编辑模式：回填正文与已有图片（图片走 data-* 而不是内联 JS 字符串，避免转义问题）
+        var editContent = document.getElementById('edit-content');
+        if (editContent && editContent.value) {
+            editor.setHtml(editContent.value);
+        }
+        Array.prototype.forEach.call(imageBox.querySelectorAll('.publish-image-seed'), function (node) {
+            images.push({
+                path: node.getAttribute('data-path'),
+                url: node.getAttribute('data-url')
+            });
+        });
+        if (images.length) {
+            renderImages();
+        }
+
+        function isProduct() {
+            return moduleSelect.value === '{{ productModuleId }}';
+        }
+
+        function syncModule() {
+            var product = isProduct();
+            // 胶囊与原生 select 双向同步：select 是数据源（提交读它），胶囊只是更直观的入口
+            Array.prototype.forEach.call(moduleRadios, function (radio) {
+                radio.checked = radio.value === moduleSelect.value;
+            });
+            articleCat.hidden = product;
+            productCat.hidden = !product;
+            productOnly.forEach(function (node) {
+                node.hidden = !product;
+            });
+        }
+        Array.prototype.forEach.call(moduleRadios, function (radio) {
+            radio.addEventListener('change', function () {
+                moduleSelect.value = radio.value;
+                syncModule();
+            });
+        });
+        moduleSelect.addEventListener('change', syncModule);
+        syncModule();
+
+        // 图片（封面 + 图集）：第一张作为封面
+        function renderImages() {
+            Array.prototype.forEach.call(imageBox.querySelectorAll('.publish-image'), function (node) {
+                imageBox.removeChild(node);
+            });
+            images.forEach(function (item, index) {
+                var card = document.createElement('div');
+                card.className = 'publish-image';
+                card.innerHTML = '<img src="' + item.url + '" alt="">' +
+                    (index === 0 ? '<em class="publish-image__cover">{% tr 'CoverImage' %}</em>' : '') +
+                    '<a href="javascript:;" class="publish-image__del"><i class="fa fa-times"></i></a>';
+                card.querySelector('.publish-image__del').addEventListener('click', function () {
+                    images.splice(index, 1);
+                    renderImages();
+                });
+                imageBox.insertBefore(card, imageBox.firstChild);
+            });
+        }
+
+        imageInput.addEventListener('change', function () {
+            var files = imageInput.files;
+            if (!files || !files.length) {
+                return;
+            }
+            Array.prototype.forEach.call(files, function (file) {
+                if (images.length >= 6) {
+                    return;
+                }
+                var data = new FormData();
+                data.append('file', file);
+                Member.request('/api/user/upload', { body: data }).then(function (res) {
+                    images.push({ path: res.data.path, url: res.data.url || res.data.thumb });
+                    renderImages();
+                }).catch(Member.errorToast);
+            });
+            imageInput.value = '';
+        });
+
+        // 从正文提取摘要（本地处理，不依赖第三方服务）
+        document.getElementById('extract-summary').addEventListener('click', function () {
+            var html = editor.getHtml();
+            if (!html) {
+                Member.toast(MEMBER_I18N.enterContent);
+                return;
+            }
+            var text = html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+            form.querySelector('[name="description"]').value = text.substring(0, 120);
+        });
+
+        function submitForm(forceDraft) {
+            var title = form.querySelector('[name="title"]').value.trim();
+            var content = editor.getHtml();
+            var categorySelect = isProduct() ? productCat : articleCat;
+            var categoryId = parseInt(categorySelect.value, 10) || 0;
+            if (title === '') {
+                Member.toast(MEMBER_I18N.enterTitle);
+                return;
+            }
+            if (content === '') {
+                Member.toast(MEMBER_I18N.enterContent);
+                return;
+            }
+            if (!categoryId) {
+                Member.toast(MEMBER_I18N.selectCategory);
+                return;
+            }
+
+            var flags = [];
+            Array.prototype.forEach.call(form.querySelectorAll('[name="flag"]:checked'), function (node) {
+                flags.push(node.value);
+            });
+            var tags = form.querySelector('[name="tags"]').value.split(',').map(function (item) {
+                return item.trim();
+            }).filter(function (item) {
+                return item !== '';
+            });
+
+            var payload = {
+                module_id: parseInt(moduleSelect.value, 10),
+                category_id: categoryId,
+                title: title,
+                keywords: form.querySelector('[name="keywords"]').value.trim(),
+                description: form.querySelector('[name="description"]').value.trim(),
+                content: content,
+                url_token: form.querySelector('[name="url_token"]').value.trim(),
+                flag: flags.join(','),
+                flags: flags,
+                tags: tags,
+                images: images.map(function (item) {
+                    return item.path;
+                }),
+                force_draft: !!forceDraft
+            };
+            // 编辑模式带上内容 ID，后端会校验归属后原地更新
+            var idField = form.querySelector('[name="id"]');
+            if (idField) {
+                payload.id = parseInt(idField.value, 10) || 0;
+            }
+
+            var timeValue = form.querySelector('[name="created_time"]').value;
+            if (timeValue) {
+                var ts = Math.floor(new Date(timeValue).getTime() / 1000);
+                if (ts > 0) {
+                    payload.created_time = ts;
+                }
+            }
+            if (isProduct()) {
+                var priceRaw = form.querySelector('[name="price"]').value.trim();
+                if (/^\d+(\.\d{1,2})?$/.test(priceRaw) && parseFloat(priceRaw) > 0) {
+                    payload.price = Math.round(parseFloat(priceRaw) * 100);
+                }
+            }
+            // 库存：编辑时一并回传，避免「没填库存」被当成 0（后台 UpdateAll 会把缺省值写成 0）
+            var stockRaw = form.querySelector('[name="stock"]').value.trim();
+            if (/^\d+$/.test(stockRaw)) {
+                payload.stock = parseInt(stockRaw, 10);
+            }
+
+            var buttons = form.querySelectorAll('button');
+            Array.prototype.forEach.call(buttons, function (btn) {
+                btn.disabled = true;
+            });
+            Member.request('/api/archive/publish', { body: payload }).then(function (res) {
+                Member.toast(res.msg || MEMBER_I18N.publishSuccess);
+                setTimeout(function () {
+                    location.href = '/member/published';
+                }, 900);
+            }).catch(function (err) {
+                Array.prototype.forEach.call(buttons, function (btn) {
+                    btn.disabled = false;
+                });
+                Member.errorToast(err);
+            });
+        }
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            submitForm(false);
+        });
+        document.getElementById('save-draft').addEventListener('click', function () {
+            submitForm(true);
+        });
+    })();
+</script>
+{% endblock %}

@@ -85,6 +85,21 @@ func ParseUserToken(ctx iris.Context) {
 		}
 	}
 
+	// 会员 API Key：JWT 失效/未携带时，退回到开放接口密钥。
+	// 这样「/api/user/* 全部会员接口」无需改动即可被 CLI / 第三方程序调用。
+	if ctx.Values().GetUintDefault("userId", 0) == 0 && tokenString != "" {
+		if user := currentSite.GetUserByApiToken(tokenString); user != nil {
+			ctx.Values().Set("userId", user.Id)
+			ctx.Values().Set("userInfo", user)
+			ctx.Values().Set("viaApiToken", true)
+			userGroup, _ := currentSite.GetUserGroupInfo(user.GroupId)
+			ctx.Values().Set("userGroup", userGroup)
+			ctx.ViewData("userId", user.Id)
+			ctx.ViewData("userGroup", userGroup)
+			ctx.ViewData("userInfo", user)
+		}
+	}
+
 	ctx.Next()
 }
 

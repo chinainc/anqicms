@@ -30,6 +30,9 @@ func manageRoute(app *iris.Application) {
 			version.Get("/info", manageController.Version)
 			version.Get("/check", manageController.CheckVersion)
 			version.Post("/upgrade", manageController.VersionUpgrade)
+			// 上传升级包（zip / tar.gz）并就地升级
+			version.Get("/env", manageController.GetUpgradeEnv)
+			version.Post("/upload-upgrade", manageController.VersionUploadUpgrade)
 		}
 
 		anqi := manage.Party("/anqi", middleware.ParseAdminToken)
@@ -464,6 +467,14 @@ func manageRoute(app *iris.Application) {
 			{
 				commission.Get("/list", manageController.PluginCommissionList)
 				commission.Get("/detail", manageController.PluginCommissionDetail)
+			}
+
+			// 认证管理（会员实名 / 企业认证）
+			userAuth := plugin.Party("/userauth")
+			{
+				userAuth.Get("/list", manageController.PluginUserAuthList)
+				userAuth.Get("/detail", manageController.PluginUserAuthDetail)
+				userAuth.Post("/audit", manageController.PluginUserAuthAudit)
 			}
 
 			finance := plugin.Party("/finance")

@@ -1,0 +1,98 @@
+{% extends 'member/layout.html' %}
+
+{% block member_title %}{% tr 'MyProfile' %}{% endblock %}
+
+{% block member %}
+<form class="member-form" id="profile-form" autocomplete="off">
+    <div class="member-panel">
+        <div class="member-panel__head">
+            <h3>{% tr 'Avatar' %}</h3>
+        </div>
+        <div class="member-avatar-row">
+            <div class="member-avatar-lg" id="avatar-preview">
+                {% if userInfo.FullAvatarURL %}
+                <img src="{{ userInfo.FullAvatarURL }}" alt="{{ userInfo.UserName }}">
+                {% else %}
+                <i class="fa fa-user"></i>
+                {% endif %}
+            </div>
+            <div class="member-avatar-tips">
+                <label class="member-btn member-btn--ghost" for="avatar-file">{% tr 'UploadAvatar' %}</label>
+                <input type="file" id="avatar-file" accept="image/*" hidden>
+                <p>{% tr 'AvatarUploadTip' %}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="member-panel">
+        <div class="member-panel__head">
+            <h3>{% tr 'MyProfile' %}</h3>
+        </div>
+        <div class="member-fields">
+            <div class="member-field">
+                <label>{% tr 'UserName' %}</label>
+                <input type="text" name="user_name" value="{{ userInfo.UserName }}" readonly>
+            </div>
+            <div class="member-field">
+                <label>{% tr 'RealName' %}</label>
+                <input type="text" name="real_name" value="{{ userInfo.RealName }}" placeholder="{% tr 'RealName' %}">
+            </div>
+            <div class="member-field">
+                <label>{% tr 'EmailAddress' %}</label>
+                <input type="email" name="email" value="{{ userInfo.Email }}" placeholder="name@example.com">
+            </div>
+            <div class="member-field">
+                <label>{% tr 'MobilePhone' %}</label>
+                <input type="text" name="phone" value="{{ userInfo.Phone }}" placeholder="{% tr 'MobilePhone' %}">
+            </div>
+            <div class="member-field member-field--full">
+                <label>{% tr 'Introduce' %}</label>
+                <textarea name="introduce" rows="4" placeholder="{% tr 'Introduce' %}">{{ userInfo.Introduce }}</textarea>
+            </div>
+        </div>
+        <p class="member-form__tip">{% tr 'LeaveBlankToKeepUnchanged' %}</p>
+        <div class="member-form__actions">
+            <button type="submit" class="member-btn">{% tr 'Save' %}</button>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block member_script %}
+<script>
+    (function () {
+        var form = document.getElementById('profile-form');
+        var fileInput = document.getElementById('avatar-file');
+
+        fileInput.addEventListener('change', function () {
+            if (!fileInput.files || !fileInput.files[0]) {
+                return;
+            }
+            var fd = new FormData();
+            fd.append('file', fileInput.files[0]);
+            Member.request('/api/user/avatar', { method: 'POST', body: fd }).then(function (res) {
+                Member.toast(MEMBER_I18N.uploadSuccess);
+                var preview = document.getElementById('avatar-preview');
+                if (res.data && res.data.avatar_url) {
+                    preview.innerHTML = '<img src="' + res.data.avatar_url + '" alt="">';
+                }
+            }).catch(Member.errorToast);
+        });
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var payload = {};
+            ['user_name', 'real_name', 'email', 'phone', 'introduce'].forEach(function (name) {
+                var el = form.querySelector('[name="' + name + '"]');
+                if (el && el.value.trim() !== '') {
+                    payload[name] = el.value.trim();
+                }
+            });
+            Member.request('/api/user/detail', { body: payload }).then(function () {
+                Member.toast(MEMBER_I18N.saveSuccess);
+                setTimeout(function () { location.reload(); }, 800);
+            }).catch(Member.errorToast);
+        });
+    })();
+</script>
+{% endblock %}

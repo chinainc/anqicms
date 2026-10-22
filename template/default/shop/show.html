@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<link rel="stylesheet" type="text/css" href="{% system with name='TemplateUrl' %}css/shop.css" />
+{% if decoration.ThemeColor %}
+<style>:root { --shop-primary: {{ decoration.ThemeColor }}; }</style>
+{% endif %}
+{% endblock %}
+
+{% block container %}
+<div class="shop-page">
+    <div class="shop-hero{% if shopBanner %} has-banner{% endif %}"{% if shopBanner %} style="background-image:url('{{ shopBanner }}')"{% endif %}>
+        <div class="container">
+            <div class="shop-hero__inner">
+                <div class="shop-hero__logo">
+                    {% if shop.LogoUrl %}
+                    <img src="{{ shop.LogoUrl }}" alt="{{ shop.Name }}">
+                    {% else %}
+                    <i class="fa fa-home"></i>
+                    {% endif %}
+                </div>
+                <div class="shop-hero__info">
+                    <h1>{{ shop.Name }}</h1>
+                    {% if shop.Intro %}<p class="shop-hero__intro">{{ shop.Intro }}</p>{% endif %}
+                    <div class="shop-hero__meta">
+                        <span><i class="fa fa-cube"></i> {{ archiveTotal }} {% tr 'Goods' %}</span>
+                        {% if shop.Contact %}<span><i class="fa fa-comments-o"></i> {{ shop.Contact }}</span>{% endif %}
+                        {% if shop.OrderCount > 0 %}<span><i class="fa fa-shopping-bag"></i> {{ shop.OrderCount }} {% tr 'SoldOrdersCount' %}</span>{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container shop-body">
+        {% if decoration.ShowNotice and shop.Notice %}
+        <div class="shop-notice">
+            <i class="fa fa-bullhorn"></i>
+            <span>{{ shop.Notice }}</span>
+        </div>
+        {% endif %}
+
+        <div class="shop-section">
+            <div class="shop-section__head">
+                <h2>{% tr 'LatestGoods' %}</h2>
+            </div>
+            {% if archives %}
+            <div class="shop-grid">
+                {% for item in archives %}
+                <a class="shop-card" href="{{ item.Link }}">
+                    <div class="shop-card__thumb">
+                        {% if item.Thumb %}
+                        <img src="{{ item.Thumb }}" alt="{{ item.Title }}">
+                        {% else %}
+                        <i class="fa fa-cube"></i>
+                        {% endif %}
+                    </div>
+                    <div class="shop-card__body">
+                        <h3>{{ item.Title }}</h3>
+                        {% if item.Price > 0 %}
+                        <span class="shop-card__price">¥{{ item.Price|priceFormat }}</span>
+                        {% endif %}
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="shop-empty">{% tr 'NoGoodsYet' %}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if decoration.Footer %}
+    <div class="shop-footer">
+        <div class="container">{{ decoration.Footer }}</div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

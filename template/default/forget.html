@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<link rel="stylesheet" type="text/css" href="{% system with name='TemplateUrl' %}css/member.css" />
+{% endblock %}
+
+{% block container %}
+<div class="auth-wrap">
+    <div class="auth-card">
+        <h1 class="auth-title">{% tr 'ForgetPassword' %}</h1>
+        <p class="auth-sub">{% tr 'ForgetPasswordTip' %}</p>
+
+        <form id="forget-form" autocomplete="off">
+            <div class="auth-field">
+                <i class="fa fa-envelope-o"></i>
+                <input type="email" name="email" placeholder="{% tr 'EmailAddress' %}" autocomplete="email">
+            </div>
+            <button type="submit" class="member-btn auth-submit">{% tr 'SendResetEmail' %}</button>
+            <div class="auth-foot">
+                <a class="auth-link" href="/login">{% tr 'BackToLogin' %}</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block bottom %}
+<script src="{% system with name='TemplateUrl' %}js/member.js" type="text/javascript"></script>
+<script>
+    (function () {
+        var form = document.getElementById('forget-form');
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var email = form.querySelector('[name="email"]').value.trim();
+            if (email === '') {
+                Member.toast(MEMBER_I18N.enterEmail);
+                return;
+            }
+            Member.request('/api/verify/email', { body: { email: email, state: 'reset' } }).then(function () {
+                Member.toast(MEMBER_I18N.resetEmailSent, 4000);
+            }).catch(Member.errorToast);
+        });
+    })();
+</script>
+{% endblock %}

@@ -25,6 +25,33 @@ import (
 	"kandaoni.com/anqicms/response"
 )
 
+// adminInjectScriptTag 注入到后台 SPA 外壳里的自定义脚本。
+// 后台前端是打包产物，无法直接改源码，所以统一在服务端输出 html 外壳时注入。
+const adminInjectScriptTag = `<script src="/system/upgrade-upload-entry.js?v=20261022163000" defer></script>` +
+	`<script src="/system/user-auth-entry.js?v=20261022150000" defer></script>`
+
+// serveAdminHTML 输出后台 SPA 的 html 外壳，并在 </body> 前注入自定义脚本。
+// 后台每个路由目录下都有一份 index.html 外壳，逐个改文件既容易漏、又会被下一次前端构建覆盖，
+// 因此改在服务端统一注入。
+func serveAdminHTML(ctx iris.Context, file string) {
+	data, err := os.ReadFile(file)
+	if err != nil {
+		ctx.StatusCode(iris.StatusNotFound)
+		return
+	}
+	html := string(data)
+	if !strings.Contains(html, adminInjectScriptTag) {
+		if idx := strings.LastIndex(strings.ToLower(html), "</body>"); idx >= 0 {
+			html = html[:idx] + adminInjectScriptTag + html[idx:]
+		} else {
+			html += adminInjectScriptTag
+		}
+	}
+	ctx.Header("Content-Type", "text/html; charset=utf-8")
+	ctx.Header("Cache-Control", "no-cache")
+	_, _ = ctx.WriteString(html)
+}
+
 // AdminFileServ 后台系统文件服务，根据请求路径输出 system 目录下的静态文件（支持目录默认 index.html）；同时根据 Site-Id 请求头或 site_id 参数为二级目录站点切换站点上下文。
 func AdminFileServ(ctx iris.Context) {
 	tmpSiteId := ctx.GetHeader("Site-Id")
@@ -43,33 +70,46 @@ func AdminFileServ(ctx iris.Context) {
 		}
 	}
 
+	basePath := config.ExecPath + "system"
 	uri := ctx.RequestPath(false)
-	if uri != "/" {
-		uriFile := config.ExecPath + strings.TrimLeft(uri, "/")
-		// 防止路径遍历: 解析出真实路径后检查是否仍在允许的目录内
-		uriFile = filepath.Clean(uriFile)
-		basePath := config.ExecPath + "system"
-		if !strings.HasPrefix(uriFile, basePath) {
-			ctx.StatusCode(403)
-			return
-		}
-		info, err := os.Stat(uriFile)
-		if err == nil && !info.IsDir() {
-			ctx.ServeFile(uriFile)
-			return
-		}
+	if uri == "/" {
+		// 后台首页外壳
+		serveAdminHTML(ctx, filepath.Join(basePath, "index.html"))
+		return
+	}
 
-		if !strings.Contains(filepath.Base(uri), ".") {
-			uriFile = strings.TrimRight(uriFile, "/") + "/index.html"
-			_, err = os.Stat(uriFile)
-			if err == nil {
-				ctx.ServeFile(uriFile)
-				return
-			}
+	uriFile := config.ExecPath + strings.TrimLeft(uri, "/")
+	// 防止路径遍历: 解析出真实路径后检查是否仍在允许的目录内
+	uriFile = filepath.Clean(uriFile)
+	if !strings.HasPrefix(uriFile, basePath) {
+		ctx.StatusCode(403)
+		return
+	}
+	info, err := os.Stat(uriFile)
+	if err == nil && !info.IsDir() {
+		if isAdminShellFile(uriFile) {
+			serveAdminHTML(ctx, uriFile)
+			return
+		}
+		ctx.ServeFile(uriFile)
+		return
+	}
+
+	if !strings.Contains(filepath.Base(uri), ".") {
+		uriFile = strings.TrimRight(uriFile, "/") + "/index.html"
+		if _, err = os.Stat(uriFile); err == nil {
+			serveAdminHTML(ctx, uriFile)
+			return
 		}
 	}
 
 	ctx.Next()
+}
+
+// isAdminShellFile 判断是否为后台 SPA 的 html 外壳（需要注入脚本）
+func isAdminShellFile(file string) bool {
+	base := strings.ToLower(filepath.Base(file))
+	return base == "index.html" || base == "404.html"
 }
 
 // Version 获取当前系统版本号及是否为试用版。

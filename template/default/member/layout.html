@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<link rel="stylesheet" type="text/css" href="{% system with name='TemplateUrl' %}css/member.css" />
+{% endblock %}
+
+{# 会员中心不展示全站搜索条 #}
+{% block search %}{% endblock %}
+
+{% block container %}
+<div class="member-page">
+    <div class="container">
+        <div class="member-crumb">
+            <a href="/">{% tr 'Home' %}</a>
+            <span class="member-crumb__sep">/</span>
+            <a href="/member">{% tr 'MemberCenter' %}</a>
+            <span class="member-crumb__sep">/</span>
+            <span class="member-crumb__cur">{% block member_title %}{% tr 'AccountOverview' %}{% endblock %}</span>
+        </div>
+        <div class="member-layout">
+            <aside class="member-side">
+                <div class="member-user">
+                    <div class="member-user__avatar">
+                        {% if userInfo.FullAvatarURL %}
+                        <img src="{{ userInfo.FullAvatarURL }}" alt="{{ userInfo.UserName }}">
+                        {% else %}
+                        <i class="fa fa-user"></i>
+                        {% endif %}
+                    </div>
+                    <div class="member-user__name">{{ userInfo.UserName }}</div>
+                    <div class="member-user__group">
+                        {% if userGroup.Title %}{{ userGroup.Title }}{% else %}{% tr 'UserGroup' %}{% endif %}
+                    </div>
+                </div>
+                <nav class="member-nav">
+                    {% for item in memberNav %}
+                    <a class="member-nav__item{% if currentRoute == item.Route %} is-active{% endif %}" href="{{ item.Link }}">
+                        <i class="fa {{ item.Icon }}"></i><span>{{ item.Title }}</span>
+                    </a>
+                    {% endfor %}
+                    <a class="member-nav__item member-nav__item--out" href="/logout" rel="nofollow">
+                        <i class="fa fa-sign-out"></i><span>{% tr 'Logout' %}</span>
+                    </a>
+                </nav>
+            </aside>
+            <section class="member-main">
+                {% block member %}{% endblock %}
+            </section>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block bottom %}
+<script>
+    window.MEMBER_I18N = {
+        saveSuccess: "{% tr 'SaveSuccessfully' %}",
+        uploadSuccess: "{% tr 'UploadSuccess' %}",
+        passwordsNotMatch: "{% tr 'PasswordsDoNotMatch' %}",
+        confirmRemove: "{% tr 'ConfirmRemove' %}",
+        requestFailed: "{% tr 'RequestFailed' %}",
+        fillAddress: "{% tr 'FillTheShippingAddress' %}",
+        selectAddress: "{% tr 'PleaseSelectShippingAddress' %}",
+        orderCreated: "{% tr 'OrderCreatedSuccess' %}",
+        signSuccess: "{% tr 'SignSuccess' %}",
+        confirmOperate: "{% tr 'ConfirmOperate' %}",
+        enterTitle: "{% tr 'EnterTheTitle' %}",
+        enterContent: "{% tr 'EnterTheContent' %}",
+        selectCategory: "{% tr 'PleaseSelectCategory' %}",
+        publishSuccess: "{% tr 'PublishSuccess' %}",
+        enterAmount: "{% tr 'PleaseEnterTheAmount' %}",
+        fillWithdrawAccount: "{% tr 'PleaseFillInTheWithdrawalAccount' %}",
+        copied: "{% tr 'Copied' %}",
+        fillAuthInfo: "{% tr 'PleaseFillInTheCompleteCertificationInformation' %}",
+        idCardInvalid: "{% tr 'IdCardNumberFormatIsIncorrect' %}"
+    };
+</script>
+<script src="{% system with name='TemplateUrl' %}js/member.js" type="text/javascript"></script>
+{% block member_script %}{% endblock %}
+{% endblock %}

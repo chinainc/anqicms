@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<link rel="stylesheet" type="text/css" href="{% system with name='TemplateUrl' %}css/member.css" />
+{% endblock %}
+
+{% block container %}
+<div class="auth-wrap">
+    <div class="auth-card">
+        <h1 class="auth-title">{% tr 'Register' %}</h1>
+        <p class="auth-sub">{% tr 'RegisterWelcome' %}</p>
+
+        <form id="register-form" autocomplete="off">
+            <div class="auth-field">
+                <i class="fa fa-user-o"></i>
+                <input type="text" name="user_name" placeholder="{% tr 'UserName' %}" autocomplete="username">
+            </div>
+            <div class="auth-field">
+                <i class="fa fa-envelope-o"></i>
+                <input type="email" name="email" placeholder="{% tr 'EmailAddress' %}" autocomplete="email">
+            </div>
+            <div class="auth-field">
+                <i class="fa fa-mobile"></i>
+                <input type="text" name="phone" placeholder="{% tr 'MobilePhoneOptional' %}" autocomplete="tel">
+            </div>
+            <div class="auth-field">
+                <i class="fa fa-lock"></i>
+                <input type="password" name="password" placeholder="{% tr 'PasswordPlaceholder' %}" autocomplete="new-password">
+            </div>
+            <div class="auth-field">
+                <i class="fa fa-lock"></i>
+                <input type="password" name="confirm_password" placeholder="{% tr 'ConfirmPassword' %}" autocomplete="new-password">
+            </div>
+            <div class="auth-field auth-field--captcha" id="captcha-row" hidden>
+                <i class="fa fa-shield"></i>
+                <input type="text" name="captcha" placeholder="{% tr 'Captcha' %}" autocomplete="off">
+                <img class="auth-captcha" id="captcha-img" alt="{% tr 'Captcha' %}">
+            </div>
+            <button type="submit" class="member-btn auth-submit">{% tr 'Register' %}</button>
+            <div class="auth-foot">
+                <span>{% tr 'HaveAccount' %}</span>
+                <a class="auth-link" href="/login">{% tr 'LoginNow' %}</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block bottom %}
+<script src="{% system with name='TemplateUrl' %}js/member.js" type="text/javascript"></script>
+<script>
+    (function () {
+        var form = document.getElementById('register-form');
+        var captchaRow = document.getElementById('captcha-row');
+        var captchaImg = document.getElementById('captcha-img');
+        var captchaId = '';
+
+        function loadCaptcha() {
+            Member.get('/api/captcha').then(function (res) {
+                if (res.data && res.data.captcha_off) {
+                    captchaRow.hidden = true;
+                    captchaId = '';
+                    return;
+                }
+                captchaRow.hidden = false;
+                captchaId = res.data.captcha_id;
+                captchaImg.src = res.data.captcha;
+            }).catch(function () {
+                captchaRow.hidden = true;
+            });
+        }
+
+        captchaImg.addEventListener('click', loadCaptcha);
+        loadCaptcha();
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var userName = form.querySelector('[name="user_name"]').value.trim();
+            var email = form.querySelector('[name="email"]').value.trim();
+            var phone = form.querySelector('[name="phone"]').value.trim();
+            var password = form.querySelector('[name="password"]').value.trim();
+            var confirmPassword = form.querySelector('[name="confirm_password"]').value.trim();
+
+            if (userName === '') {
+                Member.toast(MEMBER_I18N.enterUserName);
+                return;
+            }
+            if (email === '' && phone === '') {
+                Member.toast(MEMBER_I18N.enterEmailOrPhone);
+                return;
+            }
+            if (password.length < 6) {
+                Member.toast(MEMBER_I18N.passwordTooShort);
+                return;
+            }
+            if (password !== confirmPassword) {
+                Member.toast(MEMBER_I18N.passwordsNotMatch);
+                return;
+            }
+
+            var payload = {
+                user_name: userName,
+                password: password,
+                email: email,
+                phone: phone
+            };
+            if (captchaId !== '') {
+                payload.captcha_id = captchaId;
+                payload.captcha = form.querySelector('[name="captcha"]').value.trim();
+            }
+
+            Member.request('/api/register', { body: payload }).then(function (res) {
+                // 需要邮箱验证时后端不下发登录态，提示用户去查收邮件
+                if (res.code === 0 && res.msg) {
+                    Member.toast(res.msg, 4000);
+                    setTimeout(function () { location.href = '/login'; }, 1500);
+                    return;
+                }
+                Member.toast(MEMBER_I18N.registerSuccess);
+                setTimeout(function () { location.href = '/member'; }, 800);
+            }).catch(function (err) {
+                Member.errorToast(err);
+                if (captchaId !== '') {
+                    loadCaptcha();
+                    form.querySelector('[name="captcha"]').value = '';
+                }
+            });
+        });
+    })();
+</script>
+{% endblock %}

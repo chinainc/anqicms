@@ -136,6 +136,7 @@ func GuestbookForm(ctx iris.Context) {
 
 	//先填充默认字段
 	guestbook := &model.Guestbook{
+		UserId:    userId,
 		UserName:  req["user_name"],
 		Contact:   req["contact"],
 		Content:   req["content"],

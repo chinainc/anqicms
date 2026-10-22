@@ -12,15 +12,35 @@ import (
 
 func LoginPage(ctx iris.Context) {
 	currentSite := provider.CurrentSite(ctx)
+	redirect := ctx.URLParam("redirect")
 	userId := ctx.Values().GetUintDefault("userId", 0)
 	if userId > 0 {
+		if redirect != "" {
+			ctx.Redirect(redirect)
+			return
+		}
 		ctx.Redirect("/")
+		return
 	}
 	if webInfo, ok := ctx.Value("webInfo").(*response.WebInfo); ok {
 		webInfo.Title = currentSite.TplTr("Login")
 		ctx.ViewData("webInfo", webInfo)
 	}
+	ctx.ViewData("redirect", redirect)
 	err := ctx.View(GetViewPath(ctx, "login.html"))
+	if err != nil {
+		ctx.Values().Set("message", err.Error())
+	}
+}
+
+// ForgetPasswordPage 找回密码页：输入注册邮箱，由后端发送重置邮件
+func ForgetPasswordPage(ctx iris.Context) {
+	currentSite := provider.CurrentSite(ctx)
+	if webInfo, ok := ctx.Value("webInfo").(*response.WebInfo); ok {
+		webInfo.Title = currentSite.TplTr("ForgetPassword")
+		ctx.ViewData("webInfo", webInfo)
+	}
+	err := ctx.View(GetViewPath(ctx, "forget.html"))
 	if err != nil {
 		ctx.Values().Set("message", err.Error())
 	}

@@ -24,6 +24,10 @@ func ParseAdminToken(ctx iris.Context) {
 	if tokenString == "" {
 		tokenString = ctx.URLParam("token")
 	}
+	// 后台独立页面（不经过 SPA，没有 Admin 头）用登录时下发的 cookie
+	if tokenString == "" {
+		tokenString = ctx.GetCookie("admin_token")
+	}
 	token, tokenErr := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			// can not parse the token

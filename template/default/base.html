@@ -39,6 +39,14 @@
                     <a href="{{ item.Link }}" rel="nofollow" target="_blank">{{item.Title}}</a>
                     {% endfor %}
                     {% endnavList %}
+                    {% if userInfo %}
+                    <a href="/member/cart" rel="nofollow" class="top-cart">{% tr 'MyCart' %}<i class="fa fa-shopping-cart"></i></a>
+                    <a href="/member" rel="nofollow">{{ userInfo.UserName }}</a>
+                    <a href="/logout" rel="nofollow">{% tr 'Logout' %}</a>
+                    {% else %}
+                    <a href="/login" rel="nofollow">{% tr 'Login' %}</a>
+                    <a href="/register" rel="nofollow">{% tr 'Register' %}</a>
+                    {% endif %}
                 </div>
                 {%- languages languages %}
                 <div class="languages">
@@ -118,6 +126,9 @@
         </div>
     </header>
     <!-- header -->
+    <!-- search -->
+    {% block search %}{% include "partial/search.html" %}{% endblock %}
+    <!-- search -->
     <!-- layout -->
     <div>
     {% block container %}
@@ -219,6 +230,7 @@
     <!-- js -->
     <script src="{% system with name='TemplateUrl' %}js/jquery-3.3.1.min.js" type="text/javascript"></script>
     <script src="{% system with name='TemplateUrl' %}js/js.js" type="text/javascript"></script>
+    <script src="{% system with name='TemplateUrl' %}js/shop.js" type="text/javascript"></script>
     <!-- js -->
     <div class="hide">
         {{- pluginJsCode|safe }}

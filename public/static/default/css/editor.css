@@ -1,0 +1,365 @@
+/* ==========================================================================
+   会员发布页：富文本编辑器 + 两栏布局
+   ========================================================================== */
+
+/* ------------------------------------------------------------ 编辑器 */
+.mzed {
+    border: 1px solid var(--m-line, #e8edf3);
+    border-radius: 0.06rem;
+    overflow: hidden;
+    background: #fff;
+}
+
+.mzed-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.02rem;
+    padding: 0.06rem 0.08rem;
+    background: #fafbfc;
+    border-bottom: 1px solid var(--m-line, #e8edf3);
+}
+
+.mzed-btn {
+    min-width: 0.28rem;
+    height: 0.28rem;
+    padding: 0 0.08rem;
+    border: 1px solid transparent;
+    border-radius: 0.04rem;
+    background: transparent;
+    color: #4a5a6a;
+    font-size: 0.13rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.mzed-btn:hover {
+    background: #fff;
+    border-color: var(--m-line, #e8edf3);
+    color: var(--m-primary, #0068ab);
+}
+
+.mzed-btn i {
+    font-size: 0.13rem;
+}
+
+.mzed-body {
+    min-height: 4rem;
+}
+
+.mzed-area {
+    min-height: 4rem;
+    max-height: 8rem;
+    overflow-y: auto;
+    padding: 0.14rem 0.16rem;
+    font-size: 0.14rem;
+    line-height: 1.8;
+    color: var(--m-text, #1f2d3d);
+    outline: none;
+}
+
+.mzed-area:empty::before {
+    content: attr(data-placeholder);
+    color: #a9b6c2;
+    pointer-events: none;
+}
+
+.mzed-area img {
+    max-width: 100%;
+    height: auto;
+}
+
+.mzed-area h2 {
+    font-size: 0.2rem;
+    margin: 0.12rem 0 0.08rem;
+}
+
+.mzed-area h3 {
+    font-size: 0.17rem;
+    margin: 0.1rem 0 0.06rem;
+}
+
+.mzed-area blockquote {
+    margin: 0.1rem 0;
+    padding: 0.08rem 0.12rem;
+    border-left: 3px solid var(--m-primary, #0068ab);
+    background: #f7f9fb;
+    color: #5b6b7c;
+}
+
+.mzed-area ul,
+.mzed-area ol {
+    padding-left: 0.24rem;
+    margin: 0.08rem 0;
+}
+
+.mzed-source {
+    width: 100%;
+    min-height: 4rem;
+    padding: 0.14rem 0.16rem;
+    border: 0;
+    font-family: Consolas, Monaco, monospace;
+    font-size: 0.13rem;
+    line-height: 1.7;
+    color: #23313f;
+    background: #fbfcfd;
+    outline: none;
+    resize: vertical;
+}
+
+/* ------------------------------------------------------- 发布页两栏 */
+.publish-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 3.4rem;
+    gap: 0.16rem;
+    align-items: start;
+}
+
+.publish-main .member-panel,
+.publish-side .member-panel {
+    margin-bottom: 0.16rem;
+}
+
+.publish-main .member-field + .member-field {
+    margin-top: 0.14rem;
+}
+
+.publish-side .member-field + .member-field {
+    margin-top: 0.12rem;
+}
+
+.publish-side .member-field label {
+    font-size: 0.12rem;
+}
+
+/* 内容类型：胶囊式单选（原生 select 仅作为数据源保留在 DOM 里） */
+.publish-seg {
+    display: flex;
+    gap: 0.08rem;
+}
+
+.publish-seg__item {
+    flex: 1;
+    min-width: 0;
+}
+
+.publish-seg__item input[type="radio"] {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.publish-seg__item span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.05rem;
+    height: 0.36rem;
+    padding: 0 0.06rem;
+    border: 1px solid var(--m-line, #e8edf3);
+    border-radius: 0.06rem;
+    font-size: 0.13rem;
+    color: var(--m-text-2, #5b6b7c);
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s, box-shadow 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.publish-seg__item span i {
+    font-size: 0.13rem;
+}
+
+.publish-seg__item span:hover {
+    border-color: var(--m-primary, #0068ab);
+    color: var(--m-primary, #0068ab);
+}
+
+.publish-seg__item input:checked + span {
+    border-color: var(--m-primary, #0068ab);
+    background: var(--m-primary-soft, #e9f3fa);
+    color: var(--m-primary, #0068ab);
+    font-weight: 500;
+}
+
+.publish-seg__item input:focus-visible + span {
+    box-shadow: 0 0 0 3px rgba(0, 104, 171, 0.12);
+}
+
+/* 分类必填标记与说明 */
+.publish-required {
+    margin-left: 0.02rem;
+    color: var(--m-danger, #e5484d);
+    font-style: normal;
+}
+
+.publish-hint {
+    margin: 0.06rem 0 0;
+    font-size: 0.12rem;
+    line-height: 1.5;
+    color: var(--m-text-3, #93a1b0);
+}
+
+/* 推荐属性 */
+.publish-flags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.08rem;
+}
+
+.publish-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.04rem;
+    padding: 0.04rem 0.1rem;
+    border: 1px solid var(--m-line, #e8edf3);
+    border-radius: 1rem;
+    font-size: 0.13rem;
+    color: var(--m-text-2, #5b6b7c);
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.publish-flag:hover {
+    border-color: var(--m-primary, #0068ab);
+    color: var(--m-primary, #0068ab);
+}
+
+.publish-flag input {
+    width: auto;
+    margin: 0;
+}
+
+.publish-flag input:checked + span,
+.publish-flag:has(input:checked) {
+    color: var(--m-primary, #0068ab);
+    border-color: var(--m-primary, #0068ab);
+    background: var(--m-primary-soft, #e9f3fa);
+}
+
+/* 图片区 */
+.publish-images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.08rem;
+}
+
+.publish-image,
+.publish-image-add {
+    position: relative;
+    width: 0.86rem;
+    height: 0.86rem;
+    border-radius: 0.06rem;
+    overflow: hidden;
+    background: #f7f9fb;
+    border: 1px solid var(--m-line, #e8edf3);
+}
+
+.publish-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.publish-image__cover {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    padding: 0.02rem 0;
+    background: rgba(0, 104, 171, 0.86);
+    color: #fff;
+    font-size: 0.1rem;
+    font-style: normal;
+    text-align: center;
+}
+
+.publish-image__del {
+    position: absolute;
+    right: 0.02rem;
+    top: 0.02rem;
+    width: 0.18rem;
+    height: 0.18rem;
+    border-radius: 50%;
+    background: rgba(31, 45, 61, 0.6);
+    color: #fff;
+    font-size: 0.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.publish-image__del:hover {
+    background: #e5484d;
+}
+
+.publish-image-add {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.04rem;
+    color: #93a1b0;
+    font-size: 0.11rem;
+    cursor: pointer;
+    border-style: dashed;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.publish-image-add:hover {
+    border-color: var(--m-primary, #0068ab);
+    color: var(--m-primary, #0068ab);
+}
+
+.publish-image-add__plus {
+    font-size: 0.22rem;
+    line-height: 1;
+    font-weight: 400;
+}
+
+/* 小按钮（提取摘要等） */
+.member-link-btn {
+    margin-left: 0.08rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--m-primary, #0068ab);
+    font-size: 0.12rem;
+    cursor: pointer;
+}
+
+.member-link-btn:hover {
+    text-decoration: underline;
+}
+
+/* 底部操作条 */
+.publish-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.1rem;
+    padding: 0.14rem 0.16rem;
+    background: #fff;
+    border-radius: var(--m-radius, 0.08rem);
+    box-shadow: 0 0.02rem 0.08rem rgba(31, 45, 61, 0.06);
+}
+
+@media screen and (max-width: 1100px) {
+    .publish-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media screen and (max-width: 900px) {
+    .mzed-body,
+    .mzed-area {
+        min-height: 2.6rem;
+    }
+
+    .publish-actions .member-btn {
+        flex: 1;
+    }
+}

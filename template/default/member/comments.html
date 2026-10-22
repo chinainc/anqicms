@@ -1,0 +1,163 @@
+{% extends 'member/layout.html' %}
+
+{% block member_title %}{% tr 'MyComments' %}{% endblock %}
+
+{% block member %}
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'MyComments' %}</h3>
+        {% if pendingCount > 0 %}
+        <span class="member-badge member-badge--waiting">{{ pendingCount }} {% tr 'PendingReview' %}</span>
+        {% endif %}
+    </div>
+
+    <div class="member-tabs member-tabs--filter">
+        <a class="member-tab{% if commentStatus == -1 %} is-active{% endif %}" href="/member/comments">{% tr 'All' %}{% if commentTotal > 0 %} ({{ commentTotal }}){% endif %}</a>
+        <a class="member-tab{% if commentStatus == 0 %} is-active{% endif %}" href="/member/comments?status=0">{% tr 'PendingReview' %}{% if pendingCount > 0 %} ({{ pendingCount }}){% endif %}</a>
+        <a class="member-tab{% if commentStatus == 1 %} is-active{% endif %}" href="/member/comments?status=1">{% tr 'CommentApproved' %}</a>
+        <a class="member-tab{% if commentStatus == 3 %} is-active{% endif %}" href="/member/comments?status=3">{% tr 'CommentHidden' %}</a>
+    </div>
+
+    {% if comments %}
+    <ul class="member-review-list">
+        {% for item in comments %}
+        <li class="member-review member-comment" data-id="{{ item.Id }}">
+            <div class="member-review__head">
+                <span class="member-review__user">{{ item.UserName }}</span>
+                <span class="member-badge member-badge--{{ item.StatusClass }}">{{ item.StatusText }}</span>
+                <span class="member-review__time">{{ item.CreatedText }}</span>
+            </div>
+
+            {% if item.ParentContent %}
+            <p class="member-comment__quote">{% tr 'ReplyTo' %}：{{ item.ParentContent|truncatechars:80 }}</p>
+            {% endif %}
+
+            <p class="member-review__content">{{ item.Content }}</p>
+
+            <div class="member-review__meta">
+                <span>{% tr 'CommentOn' %}：
+                    {% if item.ArchiveUrl %}
+                    <a href="{{ item.ArchiveUrl }}" target="_blank">{{ item.ArchiveTitle }}</a>
+                    {% else %}
+                    {{ item.ArchiveTitle }}
+                    {% endif %}
+                </span>
+                <span class="member-comment__actions">
+                    {% if item.Status != 1 %}
+                    <button type="button" class="member-link-btn js-comment-status" data-id="{{ item.Id }}" data-status="1">{% tr 'Approve' %}</button>
+                    {% endif %}
+                    {% if item.Status != 3 %}
+                    <button type="button" class="member-link-btn js-comment-status" data-id="{{ item.Id }}" data-status="3">{% tr 'Hide' %}</button>
+                    {% endif %}
+                    <button type="button" class="member-link-btn js-comment-reply" data-id="{{ item.Id }}">{% tr 'Reply' %}</button>
+                    <button type="button" class="member-link-btn member-link-btn--danger js-comment-delete" data-id="{{ item.Id }}">{% tr 'Delete' %}</button>
+                </span>
+            </div>
+
+            <div class="member-comment__reply" hidden>
+                <textarea rows="2" placeholder="{% tr 'ReplyPlaceholder' %}"></textarea>
+                <div class="member-comment__reply-actions">
+                    <button type="button" class="member-btn member-btn--sm js-comment-reply-submit" data-id="{{ item.Id }}">{% tr 'SubmitReply' %}</button>
+                    <button type="button" class="member-btn member-btn--sm member-btn--ghost js-comment-reply-cancel">{% tr 'Cancel' %}</button>
+                </div>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+
+    {% if pager.TotalPage > 1 %}
+    <div class="member-pager">
+        {% if pager.PrevLink %}<a class="member-pager__link" href="{{ pager.PrevLink }}">{% tr 'PrevPage' %}</a>{% endif %}
+        {% for link in pager.Links %}
+            {% if link.Current %}
+            <span class="member-pager__link is-current">{{ link.Page }}</span>
+            {% else %}
+            <a class="member-pager__link" href="{{ link.Link }}">{{ link.Page }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if pager.NextLink %}<a class="member-pager__link" href="{{ pager.NextLink }}">{% tr 'NextPage' %}</a>{% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="member-empty">
+        <i class="fa fa-comments-o"></i>
+        <p>{% tr 'NoCommentsYet' %}</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block member_script %}
+<script>
+    (function () {
+        function reload() {
+            setTimeout(function () { location.reload(); }, 600);
+        }
+
+        document.querySelectorAll('.js-comment-status').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                Member.post('/api/user/comment/status', {
+                    id: parseInt(btn.getAttribute('data-id'), 10),
+                    status: parseInt(btn.getAttribute('data-status'), 10)
+                }).then(function (res) {
+                    Member.toast(res.msg || MEMBER_I18N.saveSuccess);
+                    reload();
+                }).catch(Member.errorToast);
+            });
+        });
+
+        document.querySelectorAll('.js-comment-delete').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                if (!confirm(MEMBER_I18N.confirmOperate)) {
+                    return;
+                }
+                Member.post('/api/user/comment/delete', {
+                    id: parseInt(btn.getAttribute('data-id'), 10)
+                }).then(function (res) {
+                    Member.toast(res.msg || MEMBER_I18N.saveSuccess);
+                    reload();
+                }).catch(Member.errorToast);
+            });
+        });
+
+        document.querySelectorAll('.js-comment-reply').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var box = btn.closest('.member-comment').querySelector('.member-comment__reply');
+                box.hidden = !box.hidden;
+                if (!box.hidden) {
+                    box.querySelector('textarea').focus();
+                }
+            });
+        });
+
+        document.querySelectorAll('.js-comment-reply-cancel').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                btn.closest('.member-comment__reply').hidden = true;
+            });
+        });
+
+        document.querySelectorAll('.js-comment-reply-submit').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var box = btn.closest('.member-comment__reply');
+                var content = box.querySelector('textarea').value.trim();
+                if (!content) {
+                    Member.toast(MEMBER_I18N.enterContent);
+                    return;
+                }
+                btn.disabled = true;
+                Member.post('/api/user/comment/reply', {
+                    id: parseInt(btn.getAttribute('data-id'), 10),
+                    content: content
+                }).then(function (res) {
+                    Member.toast(res.msg || MEMBER_I18N.saveSuccess);
+                    reload();
+                }).catch(function (err) {
+                    btn.disabled = false;
+                    Member.errorToast(err);
+                });
+            });
+        });
+    })();
+</script>
+{% endblock %}

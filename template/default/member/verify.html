@@ -1,0 +1,314 @@
+{% extends 'member/layout.html' %}
+
+{% block member_title %}{% tr 'RealNameVerification' %}{% endblock %}
+
+{% block member %}
+<div class="member-panel">
+    <div class="member-panel__head">
+        <h3>{% tr 'RealNameVerification' %}</h3>
+        {% if userAuth %}
+        <span class="member-badge member-badge--{{ userAuth.StatusClass }}">{{ userAuth.StatusText }}</span>
+        {% else %}
+        <span class="member-badge member-badge--closed">{% tr 'AuthNotSubmitted' %}</span>
+        {% endif %}
+    </div>
+
+    {% if userAuth and userAuth.Status == authPassed %}
+    <div class="verify-result verify-result--ok">
+        <i class="fa fa-check-circle"></i>
+        <div>
+            <h4>{% tr 'AuthPassedTip' %}</h4>
+            <p>{% tr 'AuthType' %}：{{ userAuth.TypeText }}　{% tr 'AuditTime' %}：{{ userAuth.AuditText }}</p>
+        </div>
+    </div>
+    <table class="member-table">
+        <tbody>
+            {% if userAuth.Type == authTypeCompany %}
+            <tr><th>{% tr 'CompanyName' %}</th><td>{{ userAuth.CompanyName }}</td></tr>
+            <tr><th>{% tr 'CompanyNo' %}</th><td>{{ userAuth.CompanyNoMasked }}</td></tr>
+            <tr><th>{% tr 'CompanyLegal' %}</th><td>{{ userAuth.RealName }}</td></tr>
+            <tr><th>{% tr 'BusinessLicence' %}</th><td>{% if userAuth.LicenceUrl %}<a href="{{ userAuth.LicenceUrl }}" target="_blank"><img class="verify-thumb" src="{{ userAuth.LicenceUrl }}" alt=""></a>{% endif %}</td></tr>
+            {% else %}
+            <tr><th>{% tr 'RealName' %}</th><td>{{ userAuth.RealName }}</td></tr>
+            <tr><th>{% tr 'IdCardNumber' %}</th><td>{{ userAuth.IdCardMasked }}</td></tr>
+            <tr><th>{% tr 'IdCardFront' %}</th><td>{% if userAuth.IdCardFrontUrl %}<a href="{{ userAuth.IdCardFrontUrl }}" target="_blank"><img class="verify-thumb" src="{{ userAuth.IdCardFrontUrl }}" alt=""></a>{% endif %}</td></tr>
+            <tr><th>{% tr 'IdCardBack' %}</th><td>{% if userAuth.IdCardBackUrl %}<a href="{{ userAuth.IdCardBackUrl }}" target="_blank"><img class="verify-thumb" src="{{ userAuth.IdCardBackUrl }}" alt=""></a>{% endif %}</td></tr>
+            {% endif %}
+            <tr><th>{% tr 'ContactPhone' %}</th><td>{{ userAuth.Phone }}</td></tr>
+        </tbody>
+    </table>
+
+    {% else %}
+
+    {% if userAuth and userAuth.Status == authPending %}
+    <div class="verify-result verify-result--waiting">
+        <i class="fa fa-clock-o"></i>
+        <div>
+            <h4>{% tr 'AuthPendingTip' %}</h4>
+            <p>{% tr 'SubmitTime' %}：{{ userAuth.CreatedText }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if userAuth and userAuth.Status == authRejected %}
+    <div class="verify-result verify-result--err">
+        <i class="fa fa-times-circle"></i>
+        <div>
+            <h4>{% tr 'AuthRejectedTip' %}</h4>
+            <p>{% tr 'RejectReason' %}：{{ userAuth.Remark }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <form class="verify-form" id="verify-form" autocomplete="off">
+        <div class="member-field">
+            <label>{% tr 'AuthType' %}</label>
+            <div class="publish-seg" id="verify-type-seg">
+                <label class="publish-seg__item">
+                    <input type="radio" name="auth_type" value="{{ authTypePerson }}"{% if not userAuth or userAuth.Type != authTypeCompany %} checked{% endif %}>
+                    <span><i class="fa fa-user"></i> {% tr 'AuthTypePerson' %}</span>
+                </label>
+                <label class="publish-seg__item">
+                    <input type="radio" name="auth_type" value="{{ authTypeCompany }}"{% if userAuth and userAuth.Type == authTypeCompany %} checked{% endif %}>
+                    <span><i class="fa fa-building-o"></i> {% tr 'AuthTypeCompany' %}</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="verify-person">
+            <div class="member-fields">
+                <div class="member-field">
+                    <label>{% tr 'RealName' %}</label>
+                    <input type="text" name="real_name" placeholder="{% tr 'RealNamePlaceholder' %}" value="{% if userAuth %}{{ userAuth.RealName }}{% elif verifyRealName %}{{ verifyRealName }}{% endif %}">
+                </div>
+                <div class="member-field">
+                    <label>{% tr 'IdCardNumber' %}</label>
+                    <input type="text" name="id_card" placeholder="{% tr 'IdCardPlaceholder' %}" maxlength="18" value="{% if userAuth %}{{ userAuth.IdCard }}{% endif %}">
+                </div>
+            </div>
+            <div class="member-fields verify-uploads">
+                <div class="member-field">
+                    <label>{% tr 'IdCardFront' %}</label>
+                    <div class="member-upload" data-upload-shape="wide">
+                        <input type="hidden" name="id_card_front" value="{% if userAuth %}{{ userAuth.IdCardFront }}{% endif %}">
+                        <div class="member-upload__box">
+                            <img class="member-upload__img" src="{% if userAuth %}{{ userAuth.IdCardFrontUrl }}{% endif %}" alt=""{% if not userAuth or not userAuth.IdCardFrontUrl %} hidden{% endif %}>
+                            <span class="member-upload__ph"{% if userAuth and userAuth.IdCardFrontUrl %} hidden{% endif %}><i class="fa fa-plus"></i><em>{% tr 'Upload' %}</em></span>
+                            <button type="button" class="member-upload__del"{% if not userAuth or not userAuth.IdCardFrontUrl %} hidden{% endif %}><i class="fa fa-times"></i></button>
+                        </div>
+                        <input type="file" accept="image/*" hidden>
+                    </div>
+                </div>
+                <div class="member-field">
+                    <label>{% tr 'IdCardBack' %}</label>
+                    <div class="member-upload" data-upload-shape="wide">
+                        <input type="hidden" name="id_card_back" value="{% if userAuth %}{{ userAuth.IdCardBack }}{% endif %}">
+                        <div class="member-upload__box">
+                            <img class="member-upload__img" src="{% if userAuth %}{{ userAuth.IdCardBackUrl }}{% endif %}" alt=""{% if not userAuth or not userAuth.IdCardBackUrl %} hidden{% endif %}>
+                            <span class="member-upload__ph"{% if userAuth and userAuth.IdCardBackUrl %} hidden{% endif %}><i class="fa fa-plus"></i><em>{% tr 'Upload' %}</em></span>
+                            <button type="button" class="member-upload__del"{% if not userAuth or not userAuth.IdCardBackUrl %} hidden{% endif %}><i class="fa fa-times"></i></button>
+                        </div>
+                        <input type="file" accept="image/*" hidden>
+                    </div>
+                </div>
+            </div>
+            <div class="member-fields verify-uploads">
+                <div class="member-field">
+                    <label>{% tr 'IdCardHand' %}</label>
+                    <div class="member-upload" data-upload-shape="wide">
+                        <input type="hidden" name="id_card_hand" value="{% if userAuth %}{{ userAuth.IdCardHand }}{% endif %}">
+                        <div class="member-upload__box">
+                            <img class="member-upload__img" src="{% if userAuth %}{{ userAuth.IdCardHandUrl }}{% endif %}" alt=""{% if not userAuth or not userAuth.IdCardHandUrl %} hidden{% endif %}>
+                            <span class="member-upload__ph"{% if userAuth and userAuth.IdCardHandUrl %} hidden{% endif %}><i class="fa fa-plus"></i><em>{% tr 'Upload' %}</em></span>
+                            <button type="button" class="member-upload__del"{% if not userAuth or not userAuth.IdCardHandUrl %} hidden{% endif %}><i class="fa fa-times"></i></button>
+                        </div>
+                        <input type="file" accept="image/*" hidden>
+                    </div>
+                    <p class="member-form__tip">{% tr 'IdCardHandTip' %}</p>
+                </div>
+                <div class="member-field">
+                    <label>{% tr 'ContactPhone' %}</label>
+                    <input type="text" name="phone" placeholder="{% tr 'ContactPhonePlaceholder' %}" value="{% if userAuth %}{{ userAuth.Phone }}{% endif %}">
+                </div>
+            </div>
+        </div>
+
+        <div class="verify-company" hidden>
+            <div class="member-fields">
+                <div class="member-field">
+                    <label>{% tr 'CompanyName' %}</label>
+                    <input type="text" name="company_name" placeholder="{% tr 'CompanyNamePlaceholder' %}" value="{% if userAuth %}{{ userAuth.CompanyName }}{% endif %}">
+                </div>
+                <div class="member-field">
+                    <label>{% tr 'CompanyNo' %}</label>
+                    <input type="text" name="company_no" placeholder="{% tr 'CompanyNoPlaceholder' %}" maxlength="18" value="{% if userAuth %}{{ userAuth.CompanyNo }}{% endif %}">
+                </div>
+                <div class="member-field">
+                    <label>{% tr 'CompanyLegal' %}</label>
+                    <input type="text" name="company_legal" placeholder="{% tr 'CompanyLegalPlaceholder' %}" value="{% if userAuth %}{{ userAuth.CompanyLegal }}{% endif %}">
+                </div>
+                <div class="member-field">
+                    <label>{% tr 'ContactPhone' %}</label>
+                    <input type="text" name="company_phone" placeholder="{% tr 'ContactPhonePlaceholder' %}" value="{% if userAuth %}{{ userAuth.Phone }}{% endif %}">
+                </div>
+            </div>
+            <div class="member-fields verify-uploads">
+                <div class="member-field">
+                    <label>{% tr 'BusinessLicence' %}</label>
+                    <div class="member-upload" data-upload-shape="wide">
+                        <input type="hidden" name="company_licence" value="{% if userAuth %}{{ userAuth.CompanyLicence }}{% endif %}">
+                        <div class="member-upload__box">
+                            <img class="member-upload__img" src="{% if userAuth %}{{ userAuth.LicenceUrl }}{% endif %}" alt=""{% if not userAuth or not userAuth.LicenceUrl %} hidden{% endif %}>
+                            <span class="member-upload__ph"{% if userAuth and userAuth.LicenceUrl %} hidden{% endif %}><i class="fa fa-plus"></i><em>{% tr 'Upload' %}</em></span>
+                            <button type="button" class="member-upload__del"{% if not userAuth or not userAuth.LicenceUrl %} hidden{% endif %}><i class="fa fa-times"></i></button>
+                        </div>
+                        <input type="file" accept="image/*" hidden>
+                    </div>
+                    <p class="member-form__tip">{% tr 'BusinessLicenceTip' %}</p>
+                </div>
+            </div>
+        </div>
+
+        <p class="member-form__tip">{% tr 'AuthPrivacyTip' %}</p>
+
+        <div class="member-form__actions">
+            <button type="submit" class="member-btn">{% tr 'SubmitCertification' %}</button>
+            <a class="member-btn member-btn--ghost" href="/member/profile">{% tr 'MyProfile' %}</a>
+        </div>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block member_script %}
+<script>
+    (function () {
+        var form = document.getElementById('verify-form');
+        if (!form) {
+            return;
+        }
+
+        var seg = document.getElementById('verify-type-seg');
+        var personBox = form.querySelector('.verify-person');
+        var companyBox = form.querySelector('.verify-company');
+
+        function currentType() {
+            var checked = seg.querySelector('input:checked');
+            return checked ? parseInt(checked.value, 10) : 1;
+        }
+
+        function syncType() {
+            var isCompany = currentType() === 2;
+            if (personBox) { personBox.hidden = isCompany; }
+            if (companyBox) { companyBox.hidden = !isCompany; }
+        }
+
+        seg.querySelectorAll('input').forEach(function (radio) {
+            radio.addEventListener('change', syncType);
+        });
+        syncType();
+
+        // 图片上传（复用 /api/user/upload）
+        document.querySelectorAll('.member-upload').forEach(function (box) {
+            var fileInput = box.querySelector('input[type="file"]');
+            var valueInput = box.querySelector('input[type="hidden"]');
+            var img = box.querySelector('.member-upload__img');
+            var placeholder = box.querySelector('.member-upload__ph');
+            var delBtn = box.querySelector('.member-upload__del');
+            var preview = box.querySelector('.member-upload__box');
+
+            function render(url) {
+                if (url) {
+                    img.src = url;
+                    img.hidden = false;
+                    placeholder.hidden = true;
+                    delBtn.hidden = false;
+                } else {
+                    img.removeAttribute('src');
+                    img.hidden = true;
+                    placeholder.hidden = false;
+                    delBtn.hidden = true;
+                }
+            }
+
+            preview.addEventListener('click', function (e) {
+                if (e.target.closest('.member-upload__del')) {
+                    return;
+                }
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', function () {
+                var file = fileInput.files && fileInput.files[0];
+                fileInput.value = '';
+                if (!file) {
+                    return;
+                }
+                var data = new FormData();
+                data.append('file', file);
+                box.classList.add('is-busy');
+                Member.request('/api/user/upload', { body: data }).then(function (res) {
+                    valueInput.value = res.data.path || '';
+                    render(res.data.url || res.data.thumb || '');
+                }).catch(Member.errorToast).then(function () {
+                    box.classList.remove('is-busy');
+                });
+            });
+
+            delBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                valueInput.value = '';
+                render('');
+            });
+        });
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var type = currentType();
+            var payload = { type: type };
+
+            function val(name) {
+                var el = form.querySelector('[name="' + name + '"]');
+                return el ? el.value.trim() : '';
+            }
+
+            if (type === 2) {
+                payload.company_name = val('company_name');
+                payload.company_no = val('company_no');
+                payload.company_legal = val('company_legal');
+                payload.company_licence = val('company_licence');
+                payload.phone = val('company_phone');
+                if (!payload.company_name || !payload.company_legal || !payload.company_licence) {
+                    Member.toast(MEMBER_I18N.fillAuthInfo);
+                    return;
+                }
+            } else {
+                payload.real_name = val('real_name');
+                payload.id_card = val('id_card');
+                payload.id_card_front = val('id_card_front');
+                payload.id_card_back = val('id_card_back');
+                payload.id_card_hand = val('id_card_hand');
+                payload.phone = val('phone');
+                if (!payload.real_name || !payload.id_card || !payload.id_card_front || !payload.id_card_back) {
+                    Member.toast(MEMBER_I18N.fillAuthInfo);
+                    return;
+                }
+                if (!/^[0-9Xx]{18}$/.test(payload.id_card)) {
+                    Member.toast(MEMBER_I18N.idCardInvalid);
+                    return;
+                }
+            }
+
+            var btn = form.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            Member.post('/api/user/auth/apply', payload).then(function (res) {
+                Member.toast(res.msg || MEMBER_I18N.saveSuccess);
+                setTimeout(function () { location.reload(); }, 800);
+            }).catch(function (err) {
+                btn.disabled = false;
+                Member.errorToast(err);
+            });
+        });
+    })();
+</script>
+{% endblock %}

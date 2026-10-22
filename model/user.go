@@ -39,9 +39,13 @@ type User struct {
 	Status        int    `json:"status" gorm:"column:status;type:tinyint(1) not null;default:0"`                 // 1 正常，0 待审核，-1 禁止
 	IsRetailer    int    `json:"is_retailer" gorm:"column:is_retailer;type:tinyint(1) not null;default:0"`       // 是否是分销员
 	Balance       int64  `json:"balance" gorm:"column:balance;type:bigint(20) not null;default:0;comment:'用户余额'"`
+	Points        int64  `json:"points" gorm:"column:points;type:bigint(20) not null;default:0;comment:'用户积分'"`
 	TotalReward   int64  `json:"total_reward" gorm:"column:total_reward;type:bigint(20) not null;default:0;comment:''"` // 分销员累计收益
 	InviteCode    string `json:"invite_code" gorm:"column:invite_code;type:varchar(100) not null;default:'';index:idx_invite_code"`
-	LastLogin     int64  `json:"last_login" gorm:"column:last_login;type:bigint(20);default:0"`
+	// ApiToken 会员开放接口密钥（REST / MCP / CLI 共用），空表示未开通。
+	// 不进 JSON，避免后台用户列表等接口把它带出去。
+	ApiToken string `json:"-" gorm:"column:api_token;type:varchar(64) not null;default:'';index:idx_api_token"`
+	LastLogin int64 `json:"last_login" gorm:"column:last_login;type:bigint(20);default:0"`
 	ExpireTime    int64  `json:"expire_time" gorm:"column:expire_time;type:bigint(20);default:0"`
 	// 是否订阅
 	Subscribed bool  `json:"subscribed" gorm:"column:subscribed;type:tinyint(1) not null;default:0"`

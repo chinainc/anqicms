@@ -31,3 +31,9 @@ keyword.json
 # 本地运行产物：主程序二进制、调试脚本与截图
 /anqicms.exe
 /tmp/
+
+# 发版产物：deploy/release 下只跟踪打包脚本与 version.json，
+# 归档文件（每个几十 MB）由 pack-release.ps1 输出到 E:\CodeBuddy\anqicms发布，不入库
+/deploy/release/*.zip
+/deploy/release/*.tar.gz
+/anqicms.syso

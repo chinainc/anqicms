@@ -1,0 +1,12 @@
+# 换行规范：只约束 deploy/ 下的发版脚本，避免影响仓库里已有的文件
+# （本仓库 core.autocrlf=true，不加规则的话 shell 脚本会被检出成 CRLF，
+#  Linux 上直接跑会报 "bad interpreter: /bin/sh^M"）
+
+# Linux 安装/卸载脚本必须是 LF
+deploy/*.sh text eol=lf
+
+# Windows 批处理必须是 CRLF（内容为 GBK，只做换行转换，不要当 UTF-8 处理）
+deploy/windows/*.bat text eol=crlf
+
+# 打包脚本给 Windows PowerShell 用
+deploy/release/*.ps1 text eol=crlf

@@ -1,0 +1,29 @@
+{
+    "name":  "anqicms",
+    "version":  "3.6.8",
+    "date":  "2026-10-22",
+    "url":  "anqicms-v3.6.8.zip",
+    "checksum":  "sha256:f71c77a9f53728966c72001ce3245ea4d43af037cb196516aad81d21a5c9155c",
+    "note":  "3.6.8：新增前台会员中心（首页/资料/密码/消息/收藏/评论/积分/财务/充值/提现/订单/发布与已发布/评价/销售/邀请/实名认证/接口令牌/购物车/店铺）与店铺展示、装修配置；新增全站搜索框（居中收窄，含移动端）；新增后台「可视化装修」（区块拖拽排序 + 实时预览 + 前台渲染）；后台新增「上传升级包」与「用户实名认证审核」；新增 anqicms-cli 命令行工具。",
+    "sql":  [
+
+            ],
+    "packages":  {
+                     "windows":  {
+                                     "url":  "anqicms-v3.6.8-windows-upgrade.zip",
+                                     "checksum":  "sha256:f71c77a9f53728966c72001ce3245ea4d43af037cb196516aad81d21a5c9155c"
+                                 },
+                     "linux":  {
+                                   "url":  "anqicms-v3.6.8-linux-upgrade.zip",
+                                   "checksum":  "sha256:658ca108d2ffc1b7c53e0873d2ca4b0a54364c195008ce0425e767de17cf50bc"
+                               }
+                 },
+    "install":  {
+                    "windows_file":  "anqicms-v3.6.8-windows.zip",
+                    "windows_sha256":  "b5494b407485da89c489c633b521473baabb13b08b084139eacbb806664dbbb1",
+                    "linux_amd64_file":  "anqicms-v3.6.8-linux-amd64.tar.gz",
+                    "linux_amd64_sha256":  "ff89fd778f7970b4d435894018f673c03902e62adeb04e597ceb770f405ce7a6",
+                    "linux_arm64_file":  "anqicms-v3.6.8-linux-arm64.tar.gz",
+                    "linux_arm64_sha256":  "84133f5180de0d1c9127ea6e2177913369dbaa6f7891a942d72ce8a00664863b"
+                }
+}

@@ -1716,6 +1716,9 @@ textarea:focus {
 .search-form {
 	display: flex;
 	align-items: stretch;
+	box-sizing: border-box;
+	width: 70%; /* 比容器窄 30%，并居中 */
+	margin: 0 auto;
 	height: 0.46rem;
 	background: #fff;
 	border: 2px solid #0068AB;
@@ -1794,8 +1797,10 @@ textarea:focus {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
+	justify-content: center;
 	gap: 0.04rem 0.18rem;
-	margin-top: 0.1rem;
+	width: 70%;
+	margin: 0.1rem auto 0;
 	font-size: 0.13rem;
 	color: #98a2ad;
 }
@@ -1810,6 +1815,11 @@ textarea:focus {
 }
 
 @media (max-width: 768px) {
+	.search-form,
+	.search-hot {
+		width: 100%;
+	}
+
 	.search-form__type {
 		flex: 0 0 1.1rem;
 	}

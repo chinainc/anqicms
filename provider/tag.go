@@ -177,7 +177,7 @@ func (w *Website) SaveTag(req *request.PluginTag) (tag *model.Tag, err error) {
 		tag.Logo = req.Logo
 	}
 	if tag.Logo != "" {
-		tag.Logo = strings.TrimPrefix(tag.Logo, w.PluginStorage.StorageUrl)
+		tag.Logo = config.StripStorageUrl(tag.Logo, w.PluginStorage.StorageUrl)
 	}
 	// 判断重复
 	if req.UpdateAll || req.UrlToken != "" {

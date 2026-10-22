@@ -272,7 +272,7 @@ func Common(ctx iris.Context) {
 			}
 			currentSite.System.BaseUrl = urlPath.Scheme + "://" + host
 			if currentSite.PluginStorage != nil {
-				currentSite.PluginStorage.StorageUrl = currentSite.System.BaseUrl
+				currentSite.PluginStorage.StorageUrl = config.NormalizeStorageUrl(currentSite.System.BaseUrl)
 			}
 		}
 	}

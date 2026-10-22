@@ -414,6 +414,8 @@ func (w *Website) LoadStorageSetting(value string) {
 	if w.PluginStorage.StorageUrl == "" || w.PluginStorage.StorageType == config.StorageTypeLocal {
 		w.PluginStorage.StorageUrl = w.System.BaseUrl
 	}
+	// 历史配置里可能带着结尾斜杠，统一归一化，避免下游拼出 http://host//uploads/x
+	w.PluginStorage.StorageUrl = config.NormalizeStorageUrl(w.PluginStorage.StorageUrl)
 }
 
 func (w *Website) LoadWeappSetting(value string) {
@@ -1137,6 +1139,12 @@ func (w *Website) ReplaceContentUrl(content string, reverse bool) string {
 	if len(content) == 0 {
 		return content
 	}
+	// 归一化一次：资源地址带尾斜杠时，下面的直接拼接都会拼出 http://host//uploads
+	storageUrl := config.NormalizeStorageUrl(w.PluginStorage.StorageUrl)
+	if storageUrl == "" {
+		// 没有资源地址时，下面所有替换都是「拼空串 / 替换成自己」的空操作，直接返回
+		return content
+	}
 	// todo，替换的时候，还需要考虑 Markdown
 	// 匹配Markdown ![新的图片](http://xxx/xxx.webp)
 	mdRe, _ := regexp.Compile(`!\[([^]]*)\]\(([^)]+)\)`)
@@ -1147,12 +1155,12 @@ func (w *Website) ReplaceContentUrl(content string, reverse bool) string {
 				return s
 			}
 			if reverse {
-				// 恢复
+				// 恢复：只还原站内相对路径，外链保持原样
 				if strings.HasPrefix(match[2], "/uploads") {
-					s = strings.Replace(s, match[2], w.PluginStorage.StorageUrl+match[2], 1)
+					s = strings.Replace(s, match[2], config.JoinStorageUrl(storageUrl, match[2]), 1)
 				}
 			} else {
-				s = strings.Replace(s, match[2], strings.TrimPrefix(match[2], w.PluginStorage.StorageUrl), 1)
+				s = strings.Replace(s, match[2], config.StripStorageUrl(match[2], storageUrl), 1)
 			}
 
 			return s
@@ -1162,19 +1170,19 @@ func (w *Website) ReplaceContentUrl(content string, reverse bool) string {
 	if reverse {
 		// 支持替换url
 		if strings.HasPrefix(content, "/uploads") {
-			content = w.PluginStorage.StorageUrl + content
+			content = config.JoinStorageUrl(storageUrl, content)
 		} else {
 			// 恢复
-			content = strings.ReplaceAll(content, "\"/uploads", "\""+w.PluginStorage.StorageUrl+"/uploads")
+			content = strings.ReplaceAll(content, "\"/uploads", "\""+storageUrl+"/uploads")
 		}
 		return content
 	} else {
 		// todo 应该只替换 src,href 中的 baseUrl
 		// 图片都上传到 uploads
-		if strings.HasPrefix(content, w.PluginStorage.StorageUrl) {
-			content = strings.TrimPrefix(content, w.PluginStorage.StorageUrl)
+		if config.HasStoragePrefix(content, storageUrl) {
+			content = config.StripStorageUrl(content, storageUrl)
 		} else {
-			content = strings.ReplaceAll(content, "\""+w.PluginStorage.StorageUrl+"/uploads", "\"/uploads")
+			content = strings.ReplaceAll(content, "\""+storageUrl+"/uploads", "\"/uploads")
 			// 如果baseUrl 是 127.0.0.1 或者localhost，则把它们全部替换
 			if strings.Contains(w.System.BaseUrl, "127.0.0.1") || strings.Contains(w.System.BaseUrl, "localhost") {
 				content = strings.ReplaceAll(content, w.System.BaseUrl, "")

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"gorm.io/gorm"
+	"kandaoni.com/anqicms/config"
 )
 
 const (
@@ -64,10 +65,8 @@ func (nav *Nav) Delete(db *gorm.DB) error {
 func (nav *Nav) GetThumb(storageUrl string) string {
 	if nav.Logo != "" {
 		//如果是一个远程地址，则缩略图和原图地址一致
-		if !strings.HasPrefix(nav.Logo, "http") && !strings.HasPrefix(nav.Logo, "//") {
-			nav.Logo = storageUrl + "/" + strings.TrimPrefix(nav.Logo, "/")
-		}
-		if strings.HasPrefix(nav.Logo, storageUrl) && !strings.HasSuffix(nav.Logo, ".svg") {
+		nav.Logo = config.JoinStorageUrl(storageUrl, nav.Logo)
+		if config.IsLocalResource(nav.Logo, storageUrl) && !strings.HasSuffix(nav.Logo, ".svg") {
 			paths, fileName := filepath.Split(nav.Logo)
 			nav.Thumb = paths + "thumb_" + fileName
 		} else {

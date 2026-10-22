@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/medivhzhan/weapp/v3"
+	"kandaoni.com/anqicms/config"
 	"kandaoni.com/anqicms/library"
 	"kandaoni.com/anqicms/model"
 )
@@ -49,7 +50,7 @@ func (w *Website) GetWeappQrcode(weappPath, scene string, userId uint) (string, 
 		w.DB.Save(&qrcode)
 	}
 
-	return w.PluginStorage.StorageUrl + "/" + qrcode.CodeUrl, nil
+	return config.JoinStorageUrl(w.PluginStorage.StorageUrl, qrcode.CodeUrl), nil
 }
 
 func (w *Website) CreateWeappQrcode(weappPath, scene string) (string, error) {

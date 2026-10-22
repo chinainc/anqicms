@@ -143,8 +143,7 @@ func (w *Website) SaveUserInfo(req *request.UserRequest) (*model.User, error) {
 		user.Birthday = req.Birthday
 	}
 	if req.UpdateAll || req.AvatarURL != "" {
-		user.AvatarURL = req.AvatarURL
-		user.AvatarURL = strings.TrimPrefix(user.AvatarURL, w.PluginStorage.StorageUrl)
+		user.AvatarURL = config.StripStorageUrl(req.AvatarURL, w.PluginStorage.StorageUrl)
 	}
 	if req.UpdateAll || req.Introduce != "" {
 		user.Introduce = req.Introduce
@@ -481,7 +480,7 @@ func (w *Website) RegisterUser(req *request.ApiRegisterRequest) (*model.User, er
 		GroupId:   w.PluginUser.DefaultGroupId,
 		Status:    w.PluginUser.GetDefaultStatus(),
 	}
-	user.AvatarURL = strings.TrimPrefix(user.AvatarURL, w.PluginStorage.StorageUrl)
+	user.AvatarURL = config.StripStorageUrl(user.AvatarURL, w.PluginStorage.StorageUrl)
 	req.Password = strings.TrimSpace(req.Password)
 	user.EncryptPassword(req.Password)
 	w.DB.Save(&user)
@@ -1132,7 +1131,7 @@ func (w *Website) UploadUserAvatar(userId uint, file multipart.File) (avatarUrl 
 	w.DB.Model(&model.User{}).Where("`id` = ?", userId).UpdateColumn("avatar_url", fileName)
 
 	// 返回头像地址
-	return w.PluginStorage.StorageUrl + "/" + fileName, nil
+	return config.JoinStorageUrl(w.PluginStorage.StorageUrl, fileName), nil
 }
 
 // 处理新用户

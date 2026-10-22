@@ -63,7 +63,7 @@ func PluginStorageConfigForm(ctx iris.Context) {
 	}
 	w2 := provider.GetWebsite(currentSite.Id)
 
-	w2.PluginStorage.StorageUrl = strings.TrimRight(req.StorageUrl, "/")
+	w2.PluginStorage.StorageUrl = config.NormalizeStorageUrl(req.StorageUrl)
 	w2.PluginStorage.StorageType = req.StorageType
 	w2.PluginStorage.KeepLocal = req.KeepLocal
 

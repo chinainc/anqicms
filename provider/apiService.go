@@ -1542,17 +1542,13 @@ func isRandomOrder(field string) bool {
 
 func (w *Website) ApiGetSystemSetting() *config.SystemConfig {
 	setting := *w.System
-	if !strings.HasPrefix(setting.SiteLogo, "http") {
-		setting.SiteLogo = w.PluginStorage.StorageUrl + "/" + strings.TrimPrefix(w.System.SiteLogo, "/")
-	}
+	setting.SiteLogo = config.JoinStorageUrl(w.PluginStorage.StorageUrl, setting.SiteLogo)
 	return &setting
 }
 
 func (w *Website) ApiGetContactSetting() *config.ContactConfig {
 	setting := *w.Contact
-	if !strings.HasPrefix(setting.Qrcode, "http") {
-		setting.Qrcode = w.PluginStorage.StorageUrl + "/" + strings.TrimPrefix(setting.Qrcode, "/")
-	}
+	setting.Qrcode = config.JoinStorageUrl(w.PluginStorage.StorageUrl, setting.Qrcode)
 
 	return &setting
 }
@@ -1660,9 +1656,7 @@ func (w *Website) ApiGetBanners(bannerType string) ([]*config.BannerItem, error)
 	for _, tmpList := range w.Banner.Banners {
 		if tmpList.Type == bannerType {
 			for _, banner := range tmpList.List {
-				if !strings.HasPrefix(banner.Logo, "http") && !strings.HasPrefix(banner.Logo, "//") {
-					banner.Logo = w.PluginStorage.StorageUrl + "/" + strings.TrimPrefix(banner.Logo, "/")
-				}
+				banner.Logo = config.JoinStorageUrl(w.PluginStorage.StorageUrl, banner.Logo)
 				bannerList = append(bannerList, &banner)
 			}
 		}

@@ -87,7 +87,7 @@ func (w *Website) GenerateAllTitleImages() {
 					w.DB.Model(&archiveData).UpdateColumn("content", content)
 				}
 				if len(logo) > 0 {
-					arc.Images = append(arc.Images, strings.TrimPrefix(logo, w.PluginStorage.StorageUrl))
+					arc.Images = append(arc.Images, config.StripStorageUrl(logo, w.PluginStorage.StorageUrl))
 				}
 				w.DB.Model(arc).UpdateColumn("images", arc.Images)
 			}
@@ -116,7 +116,7 @@ func (w *Website) GenerateAllTitleImages() {
 					w.DB.Model(&archiveData).UpdateColumn("content", content)
 				}
 				if len(logo) > 0 {
-					arc.Images = append(arc.Images, strings.TrimPrefix(logo, w.PluginStorage.StorageUrl))
+					arc.Images = append(arc.Images, config.StripStorageUrl(logo, w.PluginStorage.StorageUrl))
 				}
 				w.DB.Model(arc).UpdateColumn("images", arc.Images)
 			}

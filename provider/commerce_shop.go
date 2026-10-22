@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"sort"
-	"strings"
 
 	"gorm.io/gorm"
 	"kandaoni.com/anqicms/config"
@@ -42,14 +41,7 @@ func DefaultShopDecoration() ShopDecoration {
 // 已带协议或 // 的原样返回；空串返回空。云存储开启时按配置的域名拼，
 // 未开启时退回站点根相对地址（/uploads/...）。
 func (w *Website) StorageFullUrl(path string) string {
-	path = strings.TrimSpace(path)
-	if path == "" {
-		return ""
-	}
-	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") || strings.HasPrefix(path, "//") {
-		return path
-	}
-	return strings.TrimSuffix(w.PluginStorage.StorageUrl, "/") + "/" + strings.TrimPrefix(path, "/")
+	return config.JoinStorageUrl(w.PluginStorage.StorageUrl, path)
 }
 
 // GetShopByUserId 取店铺，不存在返回 nil

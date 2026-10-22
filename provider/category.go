@@ -139,10 +139,11 @@ func (w *Website) SaveCategory(req *request.Category) (category *model.Category,
 		category.Extra = req.Extra
 	}
 	for i, v := range category.Images {
-		category.Images[i] = strings.TrimPrefix(v, w.PluginStorage.StorageUrl)
+		// 入库存相对路径（外链不截断）
+		category.Images[i] = config.StripStorageUrl(v, w.PluginStorage.StorageUrl)
 	}
 	if category.Logo != "" {
-		category.Logo = strings.TrimPrefix(category.Logo, w.PluginStorage.StorageUrl)
+		category.Logo = config.StripStorageUrl(category.Logo, w.PluginStorage.StorageUrl)
 	}
 	//增加判断上级，强制类型与上级同步
 	if category.ParentId > 0 {
@@ -329,7 +330,7 @@ func (w *Website) SaveCategory(req *request.Category) (category *model.Category,
 			}
 			imgUrl, err2 := url.Parse(match[1])
 			if err2 == nil {
-				if imgUrl.Host != "" && imgUrl.Host != baseHost && !strings.HasPrefix(match[1], w.PluginStorage.StorageUrl) {
+				if imgUrl.Host != "" && imgUrl.Host != baseHost && !config.HasStoragePrefix(match[1], w.PluginStorage.StorageUrl) {
 					//外链
 					attachment, err2 := w.DownloadRemoteImage(match[1], "", 0)
 					if err2 == nil {
@@ -350,7 +351,7 @@ func (w *Website) SaveCategory(req *request.Category) (category *model.Category,
 			}
 			imgUrl, err2 := url.Parse(match[2])
 			if err2 == nil {
-				if imgUrl.Host != "" && imgUrl.Host != baseHost && !strings.HasPrefix(match[2], w.PluginStorage.StorageUrl) {
+				if imgUrl.Host != "" && imgUrl.Host != baseHost && !config.HasStoragePrefix(match[2], w.PluginStorage.StorageUrl) {
 					//外链
 					attachment, err2 := w.DownloadRemoteImage(match[2], "", 0)
 					if err2 == nil {

@@ -110,10 +110,11 @@ func (w *Website) SavePlace(req *request.PlaceRequest) (place *model.Place, err 
 	}
 
 	for i, v := range place.Images {
-		place.Images[i] = strings.TrimPrefix(v, w.PluginStorage.StorageUrl)
+		// 入库存相对路径（外链不截断）
+		place.Images[i] = config.StripStorageUrl(v, w.PluginStorage.StorageUrl)
 	}
 	if place.Logo != "" {
-		place.Logo = strings.TrimPrefix(place.Logo, w.PluginStorage.StorageUrl)
+		place.Logo = config.StripStorageUrl(place.Logo, w.PluginStorage.StorageUrl)
 	}
 	// 判断重复
 	req.UrlToken = library.ParseUrlToken(req.UrlToken)
@@ -255,7 +256,7 @@ func (w *Website) SavePlace(req *request.PlaceRequest) (place *model.Place, err 
 			}
 			imgUrl, err2 := url.Parse(match[1])
 			if err2 == nil {
-				if imgUrl.Host != "" && imgUrl.Host != baseHost && !strings.HasPrefix(match[1], w.PluginStorage.StorageUrl) {
+				if imgUrl.Host != "" && imgUrl.Host != baseHost && !config.HasStoragePrefix(match[1], w.PluginStorage.StorageUrl) {
 					//外链
 					attachment, err2 := w.DownloadRemoteImage(match[1], "", 0)
 					if err2 == nil {
@@ -276,7 +277,7 @@ func (w *Website) SavePlace(req *request.PlaceRequest) (place *model.Place, err 
 			}
 			imgUrl, err2 := url.Parse(match[2])
 			if err2 == nil {
-				if imgUrl.Host != "" && imgUrl.Host != baseHost && !strings.HasPrefix(match[2], w.PluginStorage.StorageUrl) {
+				if imgUrl.Host != "" && imgUrl.Host != baseHost && !config.HasStoragePrefix(match[2], w.PluginStorage.StorageUrl) {
 					//外链
 					attachment, err2 := w.DownloadRemoteImage(match[2], "", 0)
 					if err2 == nil {

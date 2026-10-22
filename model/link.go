@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"gorm.io/gorm"
+	"kandaoni.com/anqicms/config"
 )
 
 const LinkStatusWait = uint(0)
@@ -35,10 +36,8 @@ type Link struct {
 func (link *Link) GetThumb(storageUrl string) string {
 	if link.Logo != "" {
 		//如果是一个远程地址，则缩略图和原图地址一致
-		if !strings.HasPrefix(link.Logo, "http") && !strings.HasPrefix(link.Logo, "//") {
-			link.Logo = storageUrl + "/" + strings.TrimPrefix(link.Logo, "/")
-		}
-		if strings.HasPrefix(link.Logo, storageUrl) && !strings.HasSuffix(link.Logo, ".svg") {
+		link.Logo = config.JoinStorageUrl(storageUrl, link.Logo)
+		if config.IsLocalResource(link.Logo, storageUrl) && !strings.HasSuffix(link.Logo, ".svg") {
 			paths, fileName := filepath.Split(link.Logo)
 			link.Thumb = paths + "thumb_" + fileName
 		} else {

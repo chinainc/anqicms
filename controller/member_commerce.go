@@ -197,24 +197,17 @@ func memberLoadArchiveEdit(currentSite *provider.Website, userId uint, id int64)
 	// 图片：库里存相对路径，预览需要完整地址（本地存储时退回站点根）。
 	// 注意 GetArchiveByFunc/GetArchiveDraftByFunc 内部会调 GetThumb，
 	// 已把 Images 补成完整地址，这里要还原成相对路径再回传，避免把绝对地址存回库里。
-	storageUrl := strings.TrimSuffix(currentSite.PluginStorage.StorageUrl, "/")
+	storageUrl := currentSite.PluginStorage.StorageUrl
 	for _, raw := range base.Images {
 		if raw == "" {
 			continue
 		}
-		path := raw
-		if storageUrl != "" {
-			path = strings.TrimPrefix(path, storageUrl+"/")
-		}
-		url := path
-		if !strings.HasPrefix(path, "http") && !strings.HasPrefix(path, "//") {
-			if storageUrl != "" {
-				url = storageUrl + "/" + strings.TrimPrefix(path, "/")
-			} else {
-				url = "/" + strings.TrimPrefix(path, "/")
-			}
-		}
-		edit.Images = append(edit.Images, memberEditImage{Path: path, Url: url})
+		// 入库用相对路径（外链保持原样），预览用完整地址
+		path := config.StripStorageUrl(raw, storageUrl)
+		edit.Images = append(edit.Images, memberEditImage{
+			Path: path,
+			Url:  config.JoinStorageUrl(storageUrl, path),
+		})
 	}
 
 	if data, err := currentSite.GetArchiveDataById(id); err == nil && data != nil {

@@ -114,7 +114,7 @@ func PluginSaveMultiLangConfig(ctx iris.Context) {
 				} else {
 					baseUrl = mainBaseUrl
 				}
-				curSite.PluginStorage.StorageUrl = baseUrl
+				curSite.PluginStorage.StorageUrl = config.NormalizeStorageUrl(baseUrl)
 			}
 		}
 	}

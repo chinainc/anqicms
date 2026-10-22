@@ -137,24 +137,25 @@ func (a *Archive) GetThumb(storageUrl, defaultThumb string) string {
 	//取第一张
 	if len(a.Images) > 0 {
 		for i := range a.Images {
-			if !strings.HasPrefix(a.Images[i], "http") && !strings.HasPrefix(a.Images[i], "//") {
-				a.Images[i] = storageUrl + "/" + strings.TrimPrefix(a.Images[i], "/")
-			}
+			a.Images[i] = config.JoinStorageUrl(storageUrl, a.Images[i])
 		}
 		a.Logo = a.Images[0]
-		if strings.HasPrefix(a.Logo, storageUrl) && !strings.HasSuffix(a.Logo, ".svg") {
+		// 只有本站资源才有 thumb_ 缩略图；外链直接原样使用，否则会拼出 other.com/thumb_x.webp 死链
+		if config.IsLocalResource(a.Logo, storageUrl) && !strings.HasSuffix(a.Logo, ".svg") {
 			paths, fileName := filepath.Split(a.Logo)
 			a.Thumb = paths + "thumb_" + fileName
 		} else {
 			a.Thumb = a.Logo
 		}
 	} else if defaultThumb != "" {
-		a.Logo = defaultThumb
-		if !strings.HasPrefix(a.Logo, "http") && !strings.HasPrefix(a.Logo, "//") {
-			a.Logo = storageUrl + "/" + strings.TrimPrefix(a.Logo, "/")
+		a.Logo = config.JoinStorageUrl(storageUrl, defaultThumb)
+		// 默认图也可能是外链（后台直接填了远程地址），那种情况下没有 thumb_ 版本可用
+		if config.IsLocalResource(a.Logo, storageUrl) {
+			paths, fileName := filepath.Split(a.Logo)
+			a.Thumb = paths + "thumb_" + fileName
+		} else {
+			a.Thumb = a.Logo
 		}
-		paths, fileName := filepath.Split(a.Logo)
-		a.Thumb = paths + "thumb_" + fileName
 	}
 
 	return a.Thumb

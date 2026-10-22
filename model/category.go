@@ -6,6 +6,7 @@ import (
 
 	"github.com/lib/pq"
 	"gorm.io/gorm"
+	"kandaoni.com/anqicms/config"
 )
 
 type ParentCategory struct {
@@ -49,29 +50,25 @@ func (category *Category) GetThumb(storageUrl, defaultThumb string) string {
 	//取第一张
 	if len(category.Images) > 0 {
 		for i := range category.Images {
-			if !strings.HasPrefix(category.Images[i], "http") && !strings.HasPrefix(category.Images[i], "//") {
-				category.Images[i] = storageUrl + "/" + strings.TrimPrefix(category.Images[i], "/")
-			}
+			category.Images[i] = config.JoinStorageUrl(storageUrl, category.Images[i])
 		}
 	}
 	if category.Logo != "" {
 		//如果是一个远程地址，则缩略图和原图地址一致
-		if !strings.HasPrefix(category.Logo, "http") && !strings.HasPrefix(category.Logo, "//") {
-			category.Logo = storageUrl + "/" + strings.TrimPrefix(category.Logo, "/")
-		}
-		if strings.HasPrefix(category.Logo, storageUrl) && !strings.HasSuffix(category.Logo, ".svg") {
+		category.Logo = config.JoinStorageUrl(storageUrl, category.Logo)
+		if config.IsLocalResource(category.Logo, storageUrl) && !strings.HasSuffix(category.Logo, ".svg") {
 			paths, fileName := filepath.Split(category.Logo)
 			category.Thumb = paths + "thumb_" + fileName
 		} else {
 			category.Thumb = category.Logo
 		}
 	} else if defaultThumb != "" {
-		category.Thumb = defaultThumb
-		if !strings.HasPrefix(category.Thumb, "http") && !strings.HasPrefix(category.Thumb, "//") {
-			category.Thumb = storageUrl + "/" + strings.TrimPrefix(category.Thumb, "/")
+		category.Thumb = config.JoinStorageUrl(storageUrl, defaultThumb)
+		// 默认图也可能是外链（后台直接填了远程地址），那种情况下没有 thumb_ 版本可用
+		if config.IsLocalResource(category.Thumb, storageUrl) {
+			paths, fileName := filepath.Split(category.Thumb)
+			category.Thumb = paths + "thumb_" + fileName
 		}
-		paths, fileName := filepath.Split(category.Thumb)
-		category.Thumb = paths + "thumb_" + fileName
 	}
 
 	return category.Thumb

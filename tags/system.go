@@ -60,10 +60,7 @@ func (node *tagSystemNode) Execute(ctx *pongo2.ExecutionContext, writer pongo2.T
 		content = strings.TrimRight(baseUrl, "/") + "/static/" + currentSite.System.TemplateName + "/"
 		// 如果是多站点，除了独立域名外，另外两种方式的静态资源，都采用目录形式，否则会导致加载异常
 	} else if fieldName == "SiteLogo" {
-		content = currentSite.System.SiteLogo
-		if !strings.HasPrefix(content, "http") {
-			content = currentSite.PluginStorage.StorageUrl + currentSite.System.SiteLogo
-		}
+		content = config.JoinStorageUrl(currentSite.PluginStorage.StorageUrl, currentSite.System.SiteLogo)
 	} else if fieldName == "Now" {
 		format := ""
 		if args["format"] != nil {

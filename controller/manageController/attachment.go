@@ -311,7 +311,8 @@ func AttachmentEdit(ctx iris.Context) {
 		_ = currentSite.DB.Save(&attach).Error
 		// 如果是视频，并且有缩略图
 		if attach.IsImage == 2 && attach.Logo != "" {
-			logo := strings.TrimPrefix(attach.Logo, currentSite.PluginStorage.StorageUrl)
+			// Logo 可能是完整地址也可能是相对路径，统一剥成相对路径再做文件移动
+			logo := config.StripStorageUrl(attach.Logo, currentSite.PluginStorage.StorageUrl)
 			logo = strings.TrimPrefix(logo, "/")
 			if logo != "" && logo != attach.FileLocation {
 				ext := filepath.Ext(attach.FileLocation)

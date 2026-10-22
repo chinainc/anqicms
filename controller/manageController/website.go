@@ -245,7 +245,7 @@ func SaveWebsiteInfo(ctx iris.Context) {
 				current.System.BaseUrl = req.BaseUrl
 				_ = current.SaveSettingValue(provider.SystemSettingKey, current.System)
 				if current.PluginStorage.StorageType == config.StorageTypeLocal {
-					current.PluginStorage.StorageUrl = req.BaseUrl
+					current.PluginStorage.StorageUrl = config.NormalizeStorageUrl(req.BaseUrl)
 					_ = current.SaveSettingValue(provider.StorageSettingKey, current.PluginStorage)
 				}
 			}
@@ -381,7 +381,7 @@ func SaveWebsiteInfo(ctx iris.Context) {
 			}
 			current.System.BaseUrl = req.BaseUrl
 			_ = current.SaveSettingValue(provider.SystemSettingKey, current.System)
-			current.PluginStorage.StorageUrl = current.System.BaseUrl
+			current.PluginStorage.StorageUrl = config.NormalizeStorageUrl(current.System.BaseUrl)
 			_ = current.SaveSettingValue(provider.StorageSettingKey, current.PluginStorage)
 			if req.PreviewData {
 				_ = current.RestoreDesignData(current.System.TemplateName)

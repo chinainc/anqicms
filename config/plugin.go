@@ -105,7 +105,7 @@ type PluginImportApiConfig struct {
 }
 
 type PluginStorageConfig struct {
-	StorageUrl  string `json:"storage_url"`  // 静态资源地址
+	StorageUrl  string `json:"storage_url"`  // 静态资源地址；拼接/拆解一律走 url.go 的 JoinStorageUrl/StripStorageUrl/HasStoragePrefix，别手写 +"/"
 	StorageType string `json:"storage_type"` // 存储类型，默认本地：local=本地，aliyun=阿里云存储桶，tencent=腾讯云对象存储，qiniu=七牛云，upyun=又拍云，google=Google存储，awss3=Amazon S3，r2=Cloudflare R2，ftp=FTP，ssh=SFTP(SSH)通道
 	KeepLocal   bool   `json:"keep_local"`   // 非本地存储时，是否在本地保存副本
 

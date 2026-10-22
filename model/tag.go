@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"gorm.io/gorm"
+	"kandaoni.com/anqicms/config"
 )
 
 type Tag struct {
@@ -45,22 +46,19 @@ type TagContent struct {
 func (tag *Tag) GetThumb(storageUrl, defaultThumb string) string {
 	if tag.Logo != "" {
 		//如果是一个远程地址，则缩略图和原图地址一致
-		if !strings.HasPrefix(tag.Logo, "http") && !strings.HasPrefix(tag.Logo, "//") {
-			tag.Logo = storageUrl + "/" + strings.TrimPrefix(tag.Logo, "/")
-		}
-		if strings.HasPrefix(tag.Logo, storageUrl) && !strings.HasSuffix(tag.Logo, ".svg") {
+		tag.Logo = config.JoinStorageUrl(storageUrl, tag.Logo)
+		if config.IsLocalResource(tag.Logo, storageUrl) && !strings.HasSuffix(tag.Logo, ".svg") {
 			paths, fileName := filepath.Split(tag.Logo)
 			tag.Thumb = paths + "thumb_" + fileName
 		} else {
 			tag.Thumb = tag.Logo
 		}
 	} else if defaultThumb != "" {
-		tag.Thumb = defaultThumb
-		if !strings.HasPrefix(tag.Thumb, "http") && !strings.HasPrefix(tag.Thumb, "//") {
-			tag.Thumb = storageUrl + "/" + strings.TrimPrefix(tag.Thumb, "/")
+		tag.Thumb = config.JoinStorageUrl(storageUrl, defaultThumb)
+		if config.IsLocalResource(tag.Thumb, storageUrl) {
+			paths, fileName := filepath.Split(tag.Thumb)
+			tag.Thumb = paths + "thumb_" + fileName
 		}
-		paths, fileName := filepath.Split(tag.Thumb)
-		tag.Thumb = paths + "thumb_" + fileName
 	}
 
 	return tag.Thumb

@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/PuerkitoBio/goquery"
+	"kandaoni.com/anqicms/config"
 	"kandaoni.com/anqicms/library"
 	"kandaoni.com/anqicms/model"
 	"kandaoni.com/anqicms/request"
@@ -116,7 +117,7 @@ func (w *Website) SaveMaterial(req *request.PluginMaterial) (material *model.Mat
 			}
 			imgUrl, err2 := url.Parse(match[1])
 			if err2 == nil {
-				if imgUrl.Host != "" && imgUrl.Host != baseHost && !strings.HasPrefix(match[1], w.PluginStorage.StorageUrl) {
+				if imgUrl.Host != "" && imgUrl.Host != baseHost && !config.HasStoragePrefix(match[1], w.PluginStorage.StorageUrl) {
 					//外链
 					attachment, err2 := w.DownloadRemoteImage(match[1], "", 0)
 					if err2 == nil {

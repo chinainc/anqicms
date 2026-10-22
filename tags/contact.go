@@ -3,9 +3,9 @@ package tags
 import (
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/flosch/pongo2/v6"
+	"kandaoni.com/anqicms/config"
 	"kandaoni.com/anqicms/library"
 	"kandaoni.com/anqicms/provider"
 )
@@ -72,10 +72,7 @@ func (node *tagContactNode) Execute(ctx *pongo2.ExecutionContext, writer pongo2.
 		case "Youtube":
 			content = currentSite.Contact.Youtube
 		case "Qrcode":
-			content = currentSite.Contact.Qrcode
-			if !strings.HasPrefix(content, "http") && !strings.HasPrefix(content, "//") {
-				content = currentSite.PluginStorage.StorageUrl + "/" + strings.TrimPrefix(content, "/")
-			}
+			content = config.JoinStorageUrl(currentSite.PluginStorage.StorageUrl, currentSite.Contact.Qrcode)
 		default:
 			if currentSite.Contact.ExtraFields != nil {
 				for i := range currentSite.Contact.ExtraFields {

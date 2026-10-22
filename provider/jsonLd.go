@@ -163,11 +163,8 @@ func (w *Website) buildOrganizationJsonLd() iris.Map {
 	if setting.LogoImage != "" {
 		jsonLd["logo"] = setting.LogoImage
 	} else if w.System.SiteLogo != "" {
-		siteLogo := w.System.SiteLogo
-		if !strings.HasPrefix(siteLogo, "http") && !strings.HasPrefix(siteLogo, "//") {
-			siteLogo = w.PluginStorage.StorageUrl + siteLogo
-		}
-		jsonLd["logo"] = siteLogo
+		// 站内 logo 存的是相对路径，注意这里原本是「直接拼接」，storageUrl 带尾斜杠就会出 //
+		jsonLd["logo"] = config.JoinStorageUrl(w.PluginStorage.StorageUrl, w.System.SiteLogo)
 	}
 
 	if len(setting.SocialProfiles) > 0 {

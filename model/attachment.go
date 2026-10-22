@@ -6,6 +6,7 @@ import (
 	"unicode/utf8"
 
 	"gorm.io/gorm"
+	"kandaoni.com/anqicms/config"
 )
 
 type Attachment struct {
@@ -46,10 +47,10 @@ func (attachment *Attachment) AfterFind(tx *gorm.DB) error {
 }
 
 func (attachment *Attachment) GetThumb(storageUrl string) {
-	attachment.FilePath = storageUrl + "/" + attachment.FileLocation
+	attachment.FilePath = config.JoinStorageUrl(storageUrl, attachment.FileLocation)
 	// 如果不是图片
 	if attachment.IsImage == 0 && attachment.Logo == "" {
-		attachment.Logo = storageUrl + "/" + attachment.FileLocation
+		attachment.Logo = attachment.FilePath
 		if strings.HasSuffix(attachment.FileLocation, ".svg") {
 			attachment.Thumb = attachment.Logo
 		}
@@ -59,15 +60,15 @@ func (attachment *Attachment) GetThumb(storageUrl string) {
 	if attachment.Logo == "" || attachment.IsRemote == 1 {
 		attachment.Logo = attachment.FileLocation
 	}
-	if !strings.HasPrefix(attachment.Logo, "http") && !strings.HasPrefix(attachment.Logo, "//") {
+	if !config.IsAbsoluteUrl(attachment.Logo) {
 		// 兼容旧数据
 		if strings.HasPrefix(attachment.FileLocation, "20") {
 			attachment.FileLocation = "uploads/" + attachment.FileLocation
 			attachment.Logo = attachment.FileLocation
 		}
-		attachment.Logo = storageUrl + "/" + strings.TrimPrefix(attachment.Logo, "/")
+		attachment.Logo = config.JoinStorageUrl(storageUrl, attachment.Logo)
 	}
-	if strings.HasPrefix(attachment.Logo, storageUrl) && !strings.HasSuffix(attachment.Logo, ".svg") {
+	if config.IsLocalResource(attachment.Logo, storageUrl) && !strings.HasSuffix(attachment.Logo, ".svg") {
 		paths, fileName := filepath.Split(attachment.Logo)
 		attachment.Thumb = paths + "thumb_" + fileName
 	} else {

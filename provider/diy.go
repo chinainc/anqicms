@@ -422,7 +422,6 @@ func (w *Website) renderDiyArchiveList(s map[string]interface{}, defaultModule u
 		return ""
 	}
 
-	storageUrl := strings.TrimSuffix(w.PluginStorage.StorageUrl, "/")
 	title := diyStr(s, "title")
 	var b strings.Builder
 	b.WriteString(`<div class="diy-block diy-archives"><div class="container">`)
@@ -431,7 +430,7 @@ func (w *Website) renderDiyArchiveList(s map[string]interface{}, defaultModule u
 	}
 	b.WriteString(`<div class="diy-archives__grid">`)
 	for _, item := range list {
-		item.GetThumb(storageUrl, w.Content.DefaultThumb)
+		item.GetThumb(w.PluginStorage.StorageUrl, w.Content.DefaultThumb)
 		link := w.GetUrl("archive", item, 0)
 		thumb := w.StorageFullUrl(item.Thumb)
 		b.WriteString(`<a class="diy-card" href="` + html.EscapeString(link) + `">`)

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/flosch/pongo2/v6"
+	"kandaoni.com/anqicms/config"
 	"kandaoni.com/anqicms/library"
 	"kandaoni.com/anqicms/provider"
 )
@@ -195,6 +196,11 @@ func filterThumb(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.
 		}
 	}
 	if !strings.Contains(loc, "thumb_") {
+		// 外链没有 thumb_ 版本，加了只会得到 https://other.com/thumb_x.webp 这种死链
+		if w, ok := param.Interface().(*provider.Website); ok &&
+			config.IsAbsoluteUrl(loc) && !config.HasStoragePrefix(loc, w.PluginStorage.StorageUrl) {
+			return pongo2.AsValue(loc), nil
+		}
 		paths, fileName := filepath.Split(loc)
 		loc = paths + "thumb_" + fileName
 	}

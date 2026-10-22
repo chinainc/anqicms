@@ -19,10 +19,10 @@ import (
 // SettingSystem 获取站点系统配置，包括站点 Logo、Favicon 及可用的语言列表。
 func SettingSystem(ctx iris.Context) {
 	currentSite := provider.CurrentSubSite(ctx)
-	system := currentSite.System
-	if system.SiteLogo != "" && !strings.HasPrefix(system.SiteLogo, "http") && !strings.HasPrefix(system.SiteLogo, "//") {
-		system.SiteLogo = currentSite.PluginStorage.StorageUrl + system.SiteLogo
-	}
+	// 复制一份再补全地址：currentSite.System 是进程内共享的配置指针，
+	// 直接改它会把绝对地址留在内存里，下一次保存就原样写回库了。
+	system := *currentSite.System
+	system.SiteLogo = config.JoinStorageUrl(currentSite.PluginStorage.StorageUrl, system.SiteLogo)
 
 	// 检测Favicon
 	system.Favicon = ""
@@ -103,7 +103,8 @@ func SettingSystemForm(ctx iris.Context) {
 		return
 	}
 
-	req.SiteLogo = strings.TrimPrefix(req.SiteLogo, currentSite.PluginStorage.StorageUrl)
+	// 前端回传的是完整地址，这里剥回相对路径入库；外链保持原样
+	req.SiteLogo = config.StripStorageUrl(req.SiteLogo, currentSite.PluginStorage.StorageUrl)
 
 	changed := false
 	if currentSite.System.AdminUrl != req.AdminUrl {
@@ -182,18 +183,20 @@ func SettingSystemForm(ctx iris.Context) {
 // SettingContent 获取内容设置，包括默认缩略图、缩略图、编辑器等配置。
 func SettingContent(ctx iris.Context) {
 	currentSite := provider.CurrentSubSite(ctx)
-	system := currentSite.Content
-
-	for i := range system.DefaultThumbs {
-		if !strings.HasPrefix(system.DefaultThumbs[i], "http") && !strings.HasPrefix(system.DefaultThumbs[i], "//") {
-			system.DefaultThumbs[i] = currentSite.PluginStorage.StorageUrl + system.DefaultThumbs[i]
+	// 复制一份再补全地址（含切片，否则改元素会污染共享配置）
+	content := *currentSite.Content
+	if len(content.DefaultThumbs) > 0 {
+		thumbs := make([]string, len(content.DefaultThumbs))
+		for i := range content.DefaultThumbs {
+			thumbs[i] = config.JoinStorageUrl(currentSite.PluginStorage.StorageUrl, content.DefaultThumbs[i])
 		}
+		content.DefaultThumbs = thumbs
 	}
 
 	ctx.JSON(iris.Map{
 		"code": config.StatusOK,
 		"msg":  "",
-		"data": system,
+		"data": content,
 	})
 }
 
@@ -243,7 +246,7 @@ func SettingContentForm(ctx iris.Context) {
 	}
 
 	for i := range req.DefaultThumbs {
-		req.DefaultThumbs[i] = strings.TrimPrefix(req.DefaultThumbs[i], currentSite.PluginStorage.StorageUrl)
+		req.DefaultThumbs[i] = config.StripStorageUrl(req.DefaultThumbs[i], currentSite.PluginStorage.StorageUrl)
 	}
 
 	currentSite.Content.RemoteDownload = req.RemoteDownload
@@ -384,15 +387,14 @@ func SettingIndexForm(ctx iris.Context) {
 // SettingContact 获取联系方式设置，包括联系人、电话、邮箱、社交账号及二维码。
 func SettingContact(ctx iris.Context) {
 	currentSite := provider.CurrentSubSite(ctx)
-	system := currentSite.Contact
-	if system.Qrcode != "" && !strings.HasPrefix(system.Qrcode, "http") && !strings.HasPrefix(system.Qrcode, "//") {
-		system.Qrcode = currentSite.PluginStorage.StorageUrl + system.Qrcode
-	}
+	// 复制一份再补全地址，避免污染共享配置
+	contact := *currentSite.Contact
+	contact.Qrcode = config.JoinStorageUrl(currentSite.PluginStorage.StorageUrl, contact.Qrcode)
 
 	ctx.JSON(iris.Map{
 		"code": config.StatusOK,
 		"msg":  "",
-		"data": system,
+		"data": contact,
 	})
 }
 
@@ -436,7 +438,7 @@ func SettingContactForm(ctx iris.Context) {
 		return
 	}
 
-	req.Qrcode = strings.TrimPrefix(req.Qrcode, currentSite.PluginStorage.StorageUrl)
+	req.Qrcode = config.StripStorageUrl(req.Qrcode, currentSite.PluginStorage.StorageUrl)
 
 	if req.ExtraFields != nil {
 		for i := range req.ExtraFields {
@@ -815,7 +817,7 @@ func SettingBannerForm(ctx iris.Context) {
 	if req.Type == "" {
 		req.Type = "default"
 	}
-	req.Logo = strings.TrimPrefix(req.Logo, currentSite.PluginStorage.StorageUrl)
+	req.Logo = config.StripStorageUrl(req.Logo, currentSite.PluginStorage.StorageUrl)
 	if req.Id == 0 {
 		var exist bool
 		for i := range currentSite.Banner.Banners {

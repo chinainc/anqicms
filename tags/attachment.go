@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/flosch/pongo2/v6"
+	"kandaoni.com/anqicms/config"
 	"kandaoni.com/anqicms/model"
 	"kandaoni.com/anqicms/provider"
 )
@@ -33,9 +34,10 @@ func (node *tagAttachmentNode) Execute(ctx *pongo2.ExecutionContext, writer pong
 		attachment, _ = currentSite.GetAttachmentById(uint(id))
 	} else if args["name"] != nil {
 		name := args["name"].String()
-		if after, ok := strings.CutPrefix(name, currentSite.PluginStorage.StorageUrl); ok {
-			name = after
-			name = strings.TrimPrefix(name, "/")
+		// 用带边界校验的前缀判断：直接用 CutPrefix 时，资源地址为空会把任何名字都当成本站地址，
+		// 而 cdn.a.com 也会误匹配 cdn.a.com.cn
+		if config.HasStoragePrefix(name, currentSite.PluginStorage.StorageUrl) {
+			name = strings.TrimPrefix(config.StripStorageUrl(name, currentSite.PluginStorage.StorageUrl), "/")
 			attachment, _ = currentSite.GetAttachmentByFileLocation(name)
 		} else {
 			// 可能是远程，也可能不是

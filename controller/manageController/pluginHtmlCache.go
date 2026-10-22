@@ -73,7 +73,7 @@ func PluginHtmlCacheConfigForm(ctx iris.Context) {
 	w2.PluginHtmlCache.DetailCache = req.DetailCache
 	// storage 部分
 	w2.PluginHtmlCache.KeepLocal = false
-	w2.PluginHtmlCache.StorageUrl = strings.TrimRight(req.StorageUrl, "/")
+	w2.PluginHtmlCache.StorageUrl = config.NormalizeStorageUrl(req.StorageUrl)
 	w2.PluginHtmlCache.StorageType = req.StorageType
 
 	w2.PluginHtmlCache.AliyunEndpoint = req.AliyunEndpoint

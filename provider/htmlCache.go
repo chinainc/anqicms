@@ -1121,7 +1121,7 @@ func (w *Website) ReplaceAndSendCacheFile(remotePath string, buf []byte) error {
 		frontUrl = w.System.FrontUrl
 	}
 	localUrl := strings.TrimRight(frontUrl, "/")
-	remoteUrl := strings.TrimRight(w.PluginHtmlCache.StorageUrl, "/")
+	remoteUrl := config.NormalizeStorageUrl(w.PluginHtmlCache.StorageUrl)
 
 	if len(localUrl) > 0 && bytes.Contains(buf, []byte(localUrl)) {
 		buf = bytes.ReplaceAll(buf, []byte(localUrl), []byte(remoteUrl))

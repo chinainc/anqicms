@@ -432,7 +432,7 @@ func InstallForm(ctx iris.Context) {
 	website := provider.GetWebsite(dbWebsite.Id)
 
 	website.System.BaseUrl = strings.TrimRight(req.BaseUrl, "/")
-	website.PluginStorage.StorageUrl = website.System.BaseUrl
+	website.PluginStorage.StorageUrl = config.NormalizeStorageUrl(website.System.BaseUrl)
 	_ = website.SaveSettingValue(provider.SystemSettingKey, website.System)
 	_ = website.SaveSettingValue(provider.StorageSettingKey, website.PluginStorage)
 

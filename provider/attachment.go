@@ -605,7 +605,7 @@ func (w *Website) DeleteAttachment(attach *model.Attachment) error {
 		_ = w.DeleteFile(thumb)
 	}
 	// 删除poster
-	logo := strings.TrimPrefix(attach.Logo, w.PluginStorage.StorageUrl)
+	logo := config.StripStorageUrl(attach.Logo, w.PluginStorage.StorageUrl)
 	logo = strings.TrimPrefix(logo, "/")
 	if logo != "" && logo != attach.FileLocation {
 		_ = w.DeleteFile(logo)
@@ -1059,7 +1059,7 @@ func (w *Website) GetRandImageFromCategory(categoryId int, title string) string 
 		tx.Order("rand()").Limit(1).Take(&attach)
 	}
 	if len(attach.FileLocation) > 0 {
-		img = w.PluginStorage.StorageUrl + "/" + attach.FileLocation
+		img = config.JoinStorageUrl(w.PluginStorage.StorageUrl, attach.FileLocation)
 	}
 
 	return img
@@ -1075,7 +1075,7 @@ func (w *Website) GetCategoryImages(categoryId int) []*response.TinyAttachment {
 		w.DB.Model(&model.Attachment{}).Where("is_image = ?", 1).Scan(&attaches)
 	}
 	for i := range attaches {
-		attaches[i].FileLocation = w.PluginStorage.StorageUrl + "/" + attaches[i].FileLocation
+		attaches[i].FileLocation = config.JoinStorageUrl(w.PluginStorage.StorageUrl, attaches[i].FileLocation)
 	}
 	// 对attaches 进行随机打乱
 	rand.Shuffle(len(attaches), func(i, j int) {

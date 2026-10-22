@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"hash/crc32"
 	"strconv"
-	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -127,9 +126,7 @@ func (u *User) GetThumb(storageUrl string) string {
 	u.FullAvatarURL = u.AvatarURL
 	//取第一张
 	if u.FullAvatarURL != "" {
-		if !strings.HasPrefix(u.FullAvatarURL, "http") && !strings.HasPrefix(u.FullAvatarURL, "//") {
-			u.FullAvatarURL = storageUrl + "/" + strings.TrimPrefix(u.FullAvatarURL, "/")
-		}
+		u.FullAvatarURL = config.JoinStorageUrl(storageUrl, u.FullAvatarURL)
 	}
 
 	return u.FullAvatarURL

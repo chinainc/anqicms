@@ -337,13 +337,20 @@ func memberMcpTools(w *Website, userId uint) []server.ToolDef {
 				return mcpError(w.TplTr("NoPermissionToOperateThisContent"))
 			}
 			var err error
+			deleted := true
 			if archive, getErr := w.GetArchiveById(id); getErr == nil && archive != nil {
 				err = w.DeleteArchive(archive)
 			} else if draft, getErr := w.GetArchiveDraftById(id); getErr == nil && draft != nil {
 				err = w.DeleteArchiveDraft(draft)
+			} else {
+				// 两边都没有这一条，不能报 deleted: true
+				deleted = false
 			}
 			if err != nil {
 				return mcpError(err.Error())
+			}
+			if !deleted {
+				return mcpError(w.TplTr("DocumentDoesNotExist"))
 			}
 			return text(map[string]any{"id": id, "deleted": true})
 		},

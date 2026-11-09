@@ -555,8 +555,3 @@ func resolveNavs(p graphql.ResolveParams) (interface{}, error) {
 
 	return navs, nil
 }
-
-func createReview(p graphql.ResolveParams) (interface{}, error) {
-	// todo
-	return nil, nil
-}

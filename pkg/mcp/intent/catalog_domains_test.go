@@ -324,12 +324,12 @@ var defaultOpenDomainIntents = []string{
 // 这类意图的风险等级差异极大（content_article 是日常核心，system_plugin 是
 // 主机级迁移），却没人要求它们表态。所以这里补一张表。
 var openNonDomainIntents = map[string]string{
-	"content_article":    "文档写作链路核心，站点日常最高频的意图",
-	"content_manage":     "分类/标签/单页/模型的结构维护，日常写作必需",
-	"media":              "附件上传与查询，AI 配图链路必需",
-	"structure":          "导航/友链/重定向，站点结构的基础设置",
-	"system_config":      "站点配置读写（内容/联系方式等日常项）",
-	"skill":              "本地技能：list/get/reload/save 是 AI 按站点约定写作的前提；" +
+	"content_article": "文档写作链路核心，站点日常最高频的意图",
+	"content_manage":  "分类/标签/单页/模型的结构维护，日常写作必需",
+	"media":           "附件上传与查询，AI 配图链路必需",
+	"structure":       "导航/友链/重定向，站点结构的基础设置",
+	"system_config":   "站点配置读写（内容/联系方式等日常项）",
+	"skill": "本地技能：list/get/reload/save 是 AI 按站点约定写作的前提；" +
 		"唯一的不可逆动作 delete 已由审批门 + 端点字符白名单 + 只删 skills/<name> 三重覆盖",
 	"agent":              "Agent 与任务的查询与调度，只读为主",
 	"web":                "联网搜索与抓取，只读低危",

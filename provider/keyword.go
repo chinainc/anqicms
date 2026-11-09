@@ -11,11 +11,6 @@ import (
 	"kandaoni.com/anqicms/model"
 )
 
-type KeywordCSV struct {
-	Title      string `csv:"title"`
-	CategoryId uint   `csv:"category_id"`
-}
-
 func (w *Website) GetUserKeywordSetting() config.KeywordJson {
 	var keywordJson config.KeywordJson
 	value := w.GetSettingValue(KeywordSettingKey)
@@ -61,8 +56,6 @@ func (w *Website) SaveUserKeywordSetting(req config.KeywordJson, focus bool) err
 
 // 始终保持只有一个keyword任务
 var digKeywordRunning = false
-
-var maxWordsNum = int64(100000)
 
 func (w *Website) GetKeywordList(keyword string, currentPage, pageSize int) ([]*model.Keyword, int64, error) {
 	var keywords []*model.Keyword

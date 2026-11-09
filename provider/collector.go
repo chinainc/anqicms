@@ -176,7 +176,6 @@ func (w *Website) CollectArticles() {
 			}
 			keyword.LastTime = time.Now().Unix()
 			w.DB.Model(keyword).Select("article_count", "last_time").Updates(keyword)
-			//log.Println("已存在于数据库", keyword.Title)
 			continue
 		}
 		total, err := w.CollectArticlesByKeyword(keyword, false)
@@ -227,7 +226,6 @@ func (w *Website) SaveCollectArticle(archive *request.Archive, keyword *model.Ke
 	archive.OriginId = config.ArchiveFromCollect
 
 	if w.checkArticleExists(archive.OriginUrl, archive.OriginTitle, archive.Title) {
-		//log.Println("已存在于数据库", archive.OriginTitle)
 		return errors.New(w.Tr("AlreadyExistsInTheDatabase"))
 	}
 
@@ -247,7 +245,6 @@ func (w *Website) SaveCollectArticle(archive *request.Archive, keyword *model.Ke
 		}
 	}
 	archive.CategoryId = categoryId
-	//log.Println("draft:", w.CollectorConfig.SaveType)
 	// 如果不是正常发布，则存到草稿
 	isDraft := false
 	if w.CollectorConfig.SaveType == 0 {
@@ -420,7 +417,6 @@ func (w *Website) CollectSingleArticle(link *response.WebLink, keyword *model.Ke
 		Proxy: proxyIp,
 	})
 	if err != nil {
-		//log.Println("请求出错：", link.Url, err.Error())
 		if proxyIp != "" {
 			w.Proxy.RemoveIP(proxyIp)
 			// 重试2次
@@ -437,11 +433,9 @@ func (w *Website) CollectSingleArticle(link *response.WebLink, keyword *model.Ke
 	}
 	_ = w.ParseArticleDetail(archive)
 	if len(archive.Content) == 0 {
-		//log.Println("链接无文章", archive.OriginUrl)
 		return nil, errors.New(w.Tr("LinkHasNoArticle"))
 	}
 	if archive.Title == "" {
-		//log.Println("链接无文章", archive.OriginUrl)
 		return nil, errors.New(w.Tr("LinkHasNoArticle"))
 	}
 	//对乱码的跳过
@@ -486,7 +480,6 @@ func (w *Website) CollectSingleArticle(link *response.WebLink, keyword *model.Ke
 			archive.Content = strings.Join(content, "")
 		}
 	}
-	//log.Println(archive.Title, len(archive.Content), archive.OriginUrl)
 
 	return archive, nil
 }
@@ -500,10 +493,6 @@ func (w *Website) ParseBaiduJson(content string) []*response.WebLink {
 
 	var links []*response.WebLink
 	for _, v := range baiduJson.Feed.Entry {
-		// 百度的链接，都加上https
-		//if strings.HasPrefix(v.Url, "http://") && strings.Contains(v.Url, "baidu.com") {
-		//	v.Url = "https://" + strings.TrimPrefix(v.Url, "http://")
-		//}
 		// 百度自家的不采集
 		if strings.Contains(v.Url, "baidu.com") {
 			continue
@@ -786,14 +775,6 @@ func (w *Website) ParseArticleContent(nodeItem *goquery.Selection, deep int, isE
 
 	if content != nil {
 		return content, contentText, maxDeep, maxPCount
-		//return content, contentText, maxDeep, maxPCount
-		//if nodeItem.ChildrenFiltered("p").Length() == 0 {
-		//	return content, contentText, maxDeep, maxPCount
-		//}
-		////系数
-		//if float64(len(contentText))*1.5 > float64(len(nodeItem.Text())) {
-		//	return content, contentText, maxDeep, maxPCount
-		//}
 	}
 
 	// 通过一级一级的往下查找
@@ -1091,14 +1072,6 @@ func joinURL(baseURL, subURL string) (fullURL, fullURLWithoutFrag string) {
 	fullURLObj.Fragment = ""
 	fullURLWithoutFrag = fullURLObj.String()
 	return
-}
-
-func TrimContents(content string) string {
-	//移除连续空行
-	re, _ := regexp.Compile(`\n+`)
-	content = re.ReplaceAllString(content, "\n")
-
-	return strings.TrimSpace(content)
 }
 
 // CheckContentIsEnglish 统计落在 0-127之间的数量，如果达到95%，则认为是英文, 简单的方式处理

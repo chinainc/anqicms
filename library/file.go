@@ -41,13 +41,11 @@ func CopyFile(dstFileName string, srcFileName string) (written int64, err error)
 
 	err = os.MkdirAll(filepath.Dir(dstFileName), os.ModePerm)
 	if err != nil {
-		//log.Println(err.Error())
 		return 0, err
 	}
 	//打开dstFileName
 	dstFile, err := os.OpenFile(dstFileName, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		//fmt.Printf("open file error2 = %v\n", err)
 		return
 	}
 

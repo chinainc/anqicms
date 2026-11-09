@@ -69,10 +69,6 @@ type PaymentAccountRequest struct {
 	IsDefault          bool            `json:"is_default"`           // 是否为默认收款账户
 }
 
-type PaymentAccountDeleteRequest struct {
-	Id int64 `json:"id"` // 账户 ID
-}
-
 type OrderDetail struct {
 	Id          uint   `json:"id"`
 	OrderId     string `json:"order_id"`

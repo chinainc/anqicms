@@ -43,9 +43,9 @@ type User struct {
 	InviteCode    string `json:"invite_code" gorm:"column:invite_code;type:varchar(100) not null;default:'';index:idx_invite_code"`
 	// ApiToken 会员开放接口密钥（REST / MCP / CLI 共用），空表示未开通。
 	// 不进 JSON，避免后台用户列表等接口把它带出去。
-	ApiToken string `json:"-" gorm:"column:api_token;type:varchar(64) not null;default:'';index:idx_api_token"`
-	LastLogin int64 `json:"last_login" gorm:"column:last_login;type:bigint(20);default:0"`
-	ExpireTime    int64  `json:"expire_time" gorm:"column:expire_time;type:bigint(20);default:0"`
+	ApiToken   string `json:"-" gorm:"column:api_token;type:varchar(64) not null;default:'';index:idx_api_token"`
+	LastLogin  int64  `json:"last_login" gorm:"column:last_login;type:bigint(20);default:0"`
+	ExpireTime int64  `json:"expire_time" gorm:"column:expire_time;type:bigint(20);default:0"`
 	// 是否订阅
 	Subscribed bool  `json:"subscribed" gorm:"column:subscribed;type:tinyint(1) not null;default:0"`
 	OrderCount int64 `json:"order_count" gorm:"column:order_count;type:bigint(20) not null;default:0"`

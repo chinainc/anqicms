@@ -13,7 +13,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -182,10 +181,6 @@ func (w *Website) CreateTransferTask(website *request.TransferWebsite) (*Transfe
 	}
 
 	return w.transferWebsite, nil
-}
-
-func (w *Website) DeleteTransferTask() {
-	w.transferWebsite = nil
 }
 
 // TransferWebData
@@ -506,156 +501,6 @@ func (t *TransferWebsite) transferKeywords() error {
 		anchor.Id = result.Data[i].Id
 		t.w.DB.Save(&anchor)
 	}
-	return nil
-}
-
-func (t *TransferWebsite) transferArchivesOld(moduleIds []uint) error {
-	t.Current = "archive"
-	t.LastId = 0
-	t.LastMod = ""
-	for {
-		resp, err := t.getWebData("archive", t.LastId, t.LastMod)
-		if err != nil {
-			t.ErrorMsg = err.Error()
-			t.Status = 2 // done
-			return err
-		}
-		var result TransferArchives
-		err = json.Unmarshal([]byte(resp.Body), &result)
-		if err != nil {
-			t.ErrorMsg = err.Error()
-			t.Status = 2 // done
-			return errors.New(resp.Body)
-		}
-		if result.Code != 0 {
-			t.ErrorMsg = result.Msg
-			t.Status = 2 // done
-			return errors.New(result.Msg)
-		}
-		if len(result.Data) == 0 {
-			break
-		}
-		t.LastMod = result.LastMod
-		t.LastId = int64(result.Data[len(result.Data)-1].Id)
-		for i := range result.Data {
-			// 如果选择了模块，则只导入对应模块
-			if len(moduleIds) > 0 {
-				exist := false
-				for _, tmpModId := range moduleIds {
-					if tmpModId == result.Data[i].ModuleId {
-						exist = true
-						break
-					}
-				}
-				if !exist {
-					continue
-				}
-			}
-			// 迁移过来需要保持ID不变
-			archive := model.ArchiveDraft{
-				Archive: model.Archive{
-					Title:       result.Data[i].Title,
-					SeoTitle:    result.Data[i].SeoTitle,
-					UrlToken:    result.Data[i].UrlToken,
-					Keywords:    result.Data[i].Keywords,
-					Description: result.Data[i].Description,
-					ModuleId:    result.Data[i].ModuleId,
-					CategoryId:  result.Data[i].CategoryId,
-					Views:       result.Data[i].Views,
-					Images:      result.Data[i].Images,
-				},
-				Status: result.Data[i].Status,
-			}
-			if utf8.RuneCountInString(archive.Title) > 190 {
-				archive.Title = string([]rune(archive.Title)[:190])
-			}
-			if utf8.RuneCountInString(archive.Keywords) > 250 {
-				archive.Keywords = string([]rune(archive.Keywords)[:250])
-			}
-			if utf8.RuneCountInString(archive.SeoTitle) > 250 {
-				archive.SeoTitle = string([]rune(archive.SeoTitle)[:250])
-			}
-			if archive.Description == "" {
-				archive.Description = library.ParseDescription(strings.ReplaceAll(library.StripTags(result.Data[i].Content), "\n", " "), 250)
-			} else if utf8.RuneCountInString(archive.Description) > 1000 {
-				// 字段最大支持1000
-				archive.Description = string([]rune(archive.Description)[:1000])
-			}
-			if result.Data[i].Logo != "" {
-				archive.Images = append(archive.Images, result.Data[i].Logo)
-			}
-			for x := range archive.Images {
-				archive.Images[x] = strings.Replace(archive.Images[x], t.BaseUrl, "", 1)
-			}
-			archive.CreatedTime = result.Data[i].CreatedTime
-			archive.UpdatedTime = result.Data[i].UpdatedTime
-			archive.UrlToken = strings.TrimSuffix(archive.UrlToken, ".html")
-			archive.Id = result.Data[i].Id
-			archive.UrlToken = t.w.VerifyArchiveUrlToken(archive.UrlToken, archive.Title, archive.Id)
-			if archive.Status == config.ContentStatusOK {
-				// 保存到正式表
-				t.w.DB.Save(&archive.Archive)
-			} else {
-				// 保存为草稿
-				t.w.DB.Save(&archive)
-			}
-			// 保存内容表
-			archiveData := model.ArchiveData{
-				Content: ParseContent(result.Data[i].Content),
-			}
-			archiveData.Id = archive.Id
-			t.w.DB.Save(&archiveData)
-			module := t.w.GetModuleFromCache(archive.ModuleId)
-			if module != nil {
-				//extra
-				extraFields := map[string]interface{}{}
-				if len(module.Fields) > 0 {
-					for _, v := range module.Fields {
-						if result.Data[i].Extra[v.FieldName] != nil {
-							extraValue := result.Data[i].Extra[v.FieldName]
-							if v.Type == config.CustomFieldTypeNumber {
-								//只有这个类型的数据是数字，转成数字
-								extraFields[v.FieldName], _ = strconv.Atoi(fmt.Sprintf("%v", extraValue))
-							} else {
-								extraFields[v.FieldName] = extraValue
-							}
-						} else {
-							if v.Type == config.CustomFieldTypeNumber {
-								//只有这个类型的数据是数字，转成数字
-								extraFields[v.FieldName] = 0
-							} else {
-								extraFields[v.FieldName] = ""
-							}
-						}
-					}
-				}
-				if len(extraFields) > 0 {
-					// 先检查是否存在
-					var existsId uint
-					t.w.DB.Table(module.TableName).Where("`id` = ?", archive.Id).Pluck("id", &existsId)
-					if existsId > 0 {
-						// 已存在
-						t.w.DB.Table(module.TableName).Where("`id` = ?", archive.Id).Updates(extraFields)
-					} else {
-						// 新建
-						extraFields["id"] = archive.Id
-						t.w.DB.Table(module.TableName).Where("`id` = ?", archive.Id).Create(extraFields)
-					}
-				}
-			}
-			// categories
-			if result.Data[i].CategoryId > 0 {
-				_ = t.w.SaveArchiveCategories(archive.Id, []uint{result.Data[i].CategoryId})
-			}
-			// tags
-			_ = t.w.SaveTagData(archive.Id, result.Data[i].Tags)
-			// flags
-			if len(result.Data[i].Flag) > 0 {
-				_ = t.w.SaveArchiveFlags(archive.Id, strings.Split(result.Data[i].Flag, ","))
-			}
-		}
-	}
-
 	return nil
 }
 

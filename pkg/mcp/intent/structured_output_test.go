@@ -272,6 +272,7 @@ func keysOfProps(m map[string]any) []string {
 // 结构，形状可能不同。实测 content_article list：
 //   - StructuredContent.data = {list,total,page,page_size,count}
 //   - Text 里的 data          = 裸数组，total 漂在信封顶层
+//
 // 同一结果两个通道形状不一致，AI 走 text 回退通道就丢分页信息。
 func TestTextAndStructuredContentSameSource(t *testing.T) {
 	cases := []struct {

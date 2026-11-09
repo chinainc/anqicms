@@ -51,9 +51,9 @@ func newWireProbeKernel(t *testing.T, text string) *mcp.CallToolResult {
 // 判定逻辑与接线是两件事，必须各有一个测试。
 func TestHandlerWiringMarksEndpointFailure(t *testing.T) {
 	cases := []struct {
-		name     string
-		text     string
-		wantErr  bool
+		name    string
+		text    string
+		wantErr bool
 	}{
 		{"端点 5xx", `{"ok":false,"status":500,"msg":"","data":null,"code":0}`, true},
 		{"端点 ok=false", `{"ok":false,"status":200,"msg":"失败了","data":null,"code":0}`, true},

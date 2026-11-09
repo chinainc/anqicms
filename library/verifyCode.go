@@ -70,23 +70,6 @@ func (v *verifyCodeCache) GetByCode(code string, clear bool) (key string) {
 	return
 }
 
-func (v *verifyCodeCache) Verify(key, code string, clear bool) bool {
-	value := v.Get(key, clear)
-
-	return value == code
-}
-
-func (v *verifyCodeCache) Delete(code string) {
-	if _, ok := v.list[code]; !ok {
-		//数据不存在
-		return
-	}
-	v.mu.Lock()
-	delete(v.list, code)
-	v.size--
-	v.mu.Unlock()
-}
-
 func (v *verifyCodeCache) GC() {
 	for {
 		timestamp := time.Now().Unix()

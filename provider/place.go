@@ -40,12 +40,6 @@ func (w *Website) GetPlaces(ops func(tx *gorm.DB) *gorm.DB, parentId uint, showT
 	return places, nil
 }
 
-func (w *Website) GetPlaceByTitle(title string) (*model.Place, error) {
-	return w.GetPlaceByFunc(func(tx *gorm.DB) *gorm.DB {
-		return tx.Where("`title` = ?", title)
-	})
-}
-
 func (w *Website) GetPlaceById(id uint) (*model.Place, error) {
 	return w.GetPlaceByFunc(func(tx *gorm.DB) *gorm.DB {
 		return tx.Where("`id` = ?", id)
@@ -368,27 +362,6 @@ func (w *Website) GetPlaceTemplate(place *model.Place) string {
 	return ""
 }
 
-func (w *Website) GetParentPlaces(parentId uint) []*model.Place {
-	var places []*model.Place
-	if parentId == 0 {
-		return nil
-	}
-	for {
-		place := w.GetPlaceFromCache(parentId)
-		if place == nil {
-			break
-		}
-		places = append(places, place)
-		parentId = place.ParentId
-	}
-	// 将 places 翻转
-	for i, j := 0, len(places)-1; i < j; i, j = i+1, j-1 {
-		places[i], places[j] = places[j], places[i]
-	}
-
-	return places
-}
-
 func (w *Website) GetTopPlaceId(placeId uint) uint {
 	if placeId == 0 {
 		return 0
@@ -440,23 +413,6 @@ func (w *Website) GetCachePlaces() []*model.Place {
 	}
 
 	return places
-}
-
-func (w *Website) GetCachePlacesByIds(ids []uint) []*model.Place {
-	places := w.GetCachePlaces()
-	var tmpPlaces = make([]*model.Place, 0, len(ids))
-	for _, place := range places {
-		if place.Link == "" {
-			place.Link = w.GetUrl("place", place, 0)
-		}
-		for _, id := range ids {
-			if place.Id == id {
-				tmpPlaces = append(tmpPlaces, place)
-			}
-		}
-	}
-
-	return tmpPlaces
 }
 
 func (w *Website) GetSubPlaceIds(placeId uint, places []*model.Place) []uint {

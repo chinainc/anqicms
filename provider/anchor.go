@@ -20,12 +20,6 @@ import (
 
 const AnchorCacheKey = "anchor_list"
 
-type AnchorCSV struct {
-	Title  string `csv:"title"`
-	Link   string `csv:"link"`
-	Weight int    `csv:"weight"`
-}
-
 func (w *Website) GetAnchorList(keyword string, currentPage, pageSize int) ([]*model.Anchor, int64, error) {
 	var anchors []*model.Anchor
 	offset := (currentPage - 1) * pageSize

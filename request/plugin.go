@@ -168,10 +168,6 @@ type PluginRedirectDeleteRequest struct {
 	Id uint `json:"id"` // 链接ID
 }
 
-type PluginRedirectsRequest struct {
-	Urls []PluginRedirectRequest `json:"urls"`
-}
-
 type PluginBackupRequest struct {
 	Name   string `json:"name"`   // 备份文件名称
 	Remark string `json:"remark"` // 备份文件备注

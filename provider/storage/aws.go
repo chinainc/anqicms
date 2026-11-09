@@ -76,10 +76,6 @@ func (s *AwsS3Storage) objectURL(key string) string {
 	return fmt.Sprintf("%s://%s/%s/%s", s.scheme(), s.host(), s.bucket, escapeKey(key))
 }
 
-func (s *AwsS3Storage) objectPath(key string) string {
-	return fmt.Sprintf("/%s/%s", s.bucket, escapeKey(key))
-}
-
 // sha256Hex 计算 body 的 SHA256 十六进制
 func sha256Hex(body []byte) string {
 	h := sha256.Sum256(body)

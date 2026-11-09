@@ -9,10 +9,8 @@ import (
 )
 
 type tagJsonLdNode struct {
-	name    string
 	args    map[string]pongo2.IEvaluator
 	wrapper *pongo2.NodeWrapper
-	data    []byte
 }
 
 func (node *tagJsonLdNode) Execute(ctx *pongo2.ExecutionContext, writer pongo2.TemplateWriter) *pongo2.Error {

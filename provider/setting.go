@@ -944,18 +944,6 @@ func (w *Website) SaveSettingValue(key string, value interface{}) error {
 	return w.DB.Save(&setting).Error
 }
 
-func (w *Website) SaveSettingValueRaw(key string, value interface{}) error {
-	if w.DB == nil {
-		return nil
-	}
-	setting := model.Setting{
-		Key:   key,
-		Value: fmt.Sprint(value),
-	}
-
-	return w.DB.Save(&setting).Error
-}
-
 func (w *Website) DeleteCache() {
 	// todo, 清理缓存
 	w.Cache.CleanAll()

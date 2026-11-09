@@ -1,7 +1,6 @@
 package library
 
 import (
-	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
@@ -267,11 +266,6 @@ type Qualitier interface {
 type jpegReader struct {
 	rs io.ReadSeeker
 	q  int
-}
-
-// NewQualityWithBytes ...
-func NewQualityWithBytes(buf []byte) (qr Qualitier, err error) {
-	return NewQuality(bytes.NewReader(buf))
 }
 
 // NewQuality ...

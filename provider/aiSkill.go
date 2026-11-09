@@ -149,17 +149,6 @@ func runShellCommand(cmd string) string {
 }
 
 // ================================================================
-//  SkillBackend 接口
-// ================================================================
-
-type SkillBackend interface {
-	List(ctx context.Context) ([]SkillFrontMatter, error)
-	Get(ctx context.Context, name string) (*Skill, error)
-	Save(ctx context.Context, skill *Skill) error
-	Reload(ctx context.Context) error
-}
-
-// ================================================================
 //  FilesystemSkillBackend — 多目录扫描 + 命名空间技能
 // ================================================================
 
@@ -252,61 +241,6 @@ func ensureSeedSkills(globalDir string) {
 		}
 		log.Printf("[skill] extracted seed skill: %s", skillName)
 	}
-}
-
-// ================================================================
-//  插件技能源管理
-// ================================================================
-
-// InstallSkillPluginFromGit 从 Git 仓库安装技能插件
-// 克隆到 data/plugins/{name}/ 然后重新加载
-func InstallSkillPluginFromGit(name, repoURL string) error {
-	if name == "" || repoURL == "" {
-		return fmt.Errorf("name and repo URL are required")
-	}
-	pluginDir := filepath.Join(strings.TrimSuffix(config.ExecPath, "/"), "data", "plugins", name)
-	// 已存在则先更新
-	if _, err := os.Stat(pluginDir); err == nil {
-		// git pull
-		cmd := exec.Command("git", "-C", pluginDir, "pull", "--ff-only")
-		if out, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("git pull failed: %s: %w", string(out), err)
-		}
-	} else {
-		// git clone
-		parentDir := filepath.Dir(pluginDir)
-		_ = os.MkdirAll(parentDir, 0755)
-		cmd := exec.Command("git", "clone", repoURL, pluginDir)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("git clone failed: %s: %w", string(out), err)
-		}
-	}
-	return nil
-}
-
-// UninstallSkillPlugin 卸载技能插件
-func UninstallSkillPlugin(name string) error {
-	pluginDir := filepath.Join(strings.TrimSuffix(config.ExecPath, "/"), "data", "plugins", name)
-	return os.RemoveAll(pluginDir)
-}
-
-// ListSkillPlugins 列出已安装的技能插件
-func ListSkillPlugins() ([]string, error) {
-	pluginDir := filepath.Join(strings.TrimSuffix(config.ExecPath, "/"), "data", "plugins")
-	entries, err := os.ReadDir(pluginDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	var names []string
-	for _, e := range entries {
-		if e.IsDir() {
-			names = append(names, e.Name())
-		}
-	}
-	return names, nil
 }
 
 // ================================================================
@@ -573,13 +507,6 @@ func SetSkillScopeHook(hook SkillScopeHook) {
 	globalSkillScopeHook = hook
 }
 
-// ClearSkillScopeHook 清除全局技能 scope hook (主循环结束时调用)。
-func ClearSkillScopeHook() {
-	globalSkillScopeMu.Lock()
-	defer globalSkillScopeMu.Unlock()
-	globalSkillScopeHook = nil
-}
-
 // GetAiServiceForSkill 返回当前激活的技能 scope hook。
 // 返回 nil 表示无 hook 设置。
 func GetAiServiceForSkill() SkillScopeHook {
@@ -785,27 +712,4 @@ func skillSaveTool() (*schema.ToolInfo, toolHandler) {
 			}
 			return fmt.Sprintf("技能 %q 已保存，路径: data/skills/%s/SKILL.md", args.Name, args.Name), nil
 		}
-}
-
-// ================================================================
-//  系统提示构建
-// ================================================================
-
-// BuildSkillSystemPrompt 返回技能系统的使用指导
-func BuildSkillSystemPrompt() string {
-	return `## 技能系统(Skills)
-技能是预设的专业工作流程模板，可在执行专业任务时加载指导。
-- skill_list: 列出所有可用技能
-- skill_get: 加载指定技能的完整内容，支持 $ARGUMENTS 变量替换
-- skill_reload: 管理员编辑技能后重新加载
-- skill_save: 创建或更新技能
-
-使用 skill_get 加载技能后，技能内容可能引用本系统的其他工具，按需调用即可。`
-}
-
-// BuildSkillToolDescription 返回技能工具的 MCP 描述
-func BuildSkillToolDescription() string {
-	listTool, _ := skillListTool()
-	getTool, _ := skillGetTool()
-	return fmt.Sprintf("- %s: %s\n- %s: %s", listTool.Name, listTool.Desc, getTool.Name, getTool.Desc)
 }

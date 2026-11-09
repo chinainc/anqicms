@@ -25,11 +25,6 @@ import (
 	"kandaoni.com/anqicms/provider"
 )
 
-// defaultChatMaxRounds 是主对话 / 智能体对话单次执行的最大轮数（一轮 = 一次 LLM 调用 + 工具执行）。
-// 集中在此便于不改动逻辑即可统一调整；复杂多步任务（如长文 GEO 优化）可酌情调高。
-// 定时 agent 与子 agent 各有独立的 MaxRounds 控制（见 model.AiAgent.MaxRounds / SubagentTask.MaxRounds）。
-const defaultChatMaxRounds = 20
-
 // ChatRequest represents an AI chat request
 type ChatRequest struct {
 	SessionID    string        `json:"session_id"`
@@ -46,13 +41,6 @@ type ChatFileRef struct {
 	FileName string `json:"file_name"`
 	FilePath string `json:"file_path"`
 	FileType string `json:"file_type"` // attachment|template
-}
-
-// ChatResponse represents an AI chat response
-type ChatResponse struct {
-	Code int         `json:"code"`
-	Msg  string      `json:"msg"`
-	Data interface{} `json:"data,omitempty"`
 }
 
 // Chat handles the chat request and returns SSE stream with AI response

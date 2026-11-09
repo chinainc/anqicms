@@ -87,11 +87,6 @@ func (a *ArchiveDraft) BeforeCreate(tx *gorm.DB) (err error) {
 	return
 }
 
-type NextArchiveId struct {
-	Id        int64 `json:"-"`
-	QueryTime int64 `json:"-"`
-}
-
 var nextArchiveIdStore = sync.Mutex{}
 
 // GetNextArchiveId

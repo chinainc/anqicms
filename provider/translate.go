@@ -2,7 +2,6 @@ package provider
 
 import (
 	"bytes"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -230,27 +229,6 @@ func (yt *YoudaoTranslate) encrypt(strSrc string) string {
 	return hex.EncodeToString(bts[:])
 }
 
-func (yt *YoudaoTranslate) getInput(q string) string {
-	str := []rune(q)
-	strLen := len(str)
-	if strLen <= 20 {
-		return q
-	} else {
-		return string(str[:10]) + strconv.Itoa(strLen) + string(str[strLen-10:])
-	}
-}
-
-func (yt *YoudaoTranslate) getUuid() string {
-	b := make([]byte, 16)
-	_, err := io.ReadFull(rand.Reader, b)
-	if err != nil {
-		return ""
-	}
-	b[6] = (b[6] & 0x0f) | 0x40
-	b[8] = (b[8] & 0x3f) | 0x80
-	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
-}
-
 type Deepl struct {
 	baseURL string
 	apiKey  string
@@ -358,79 +336,6 @@ func (d *Deepl) GetGlossaries() (string, error) {
 
 	buf := new(bytes.Buffer)
 	return buf.String(), nil
-}
-
-type CreateGlossaryPayload struct {
-	Name          string `json:"name"`
-	SourceLang    string `json:"source_lang"`
-	TargetLang    string `json:"target_lang"`
-	EntriesFormat string `json:"entries_format"`
-	Entries       string `json:"entries"`
-}
-
-type Glossary struct {
-	ID           string `json:"glossary_id"`
-	Name         string `json:"name"`
-	Ready        bool   `json:"ready"`
-	SourceLang   string `json:"source_lang"`
-	TargetLang   string `json:"target_lang"`
-	CreationTime string `json:"creation_time"`
-	EntryCount   int    `json:"entry_count"`
-}
-
-func (d *Deepl) CreateGlossary(name, sourceLang, targetLang string, entriesTSV io.Reader) (*Glossary, error) {
-
-	buf := new(strings.Builder)
-	_, err := io.Copy(buf, entriesTSV)
-
-	if err != nil {
-		return nil, err
-	}
-
-	entries := strings.ReplaceAll(buf.String(), "\r\n", "\n")
-
-	payload := CreateGlossaryPayload{
-		Name:          name,
-		SourceLang:    sourceLang,
-		TargetLang:    targetLang,
-		EntriesFormat: "tsv",
-		Entries:       entries,
-	}
-
-	j, err := json.Marshal(payload)
-
-	if err != nil {
-		return nil, err
-	}
-
-	url := fmt.Sprintf("%s/glossaries", d.baseURL)
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(j))
-
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("DeepL-Auth-Key %s", d.apiKey))
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	createdGlossary := Glossary{}
-
-	err = json.NewDecoder(resp.Body).Decode(&createdGlossary)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &createdGlossary, nil
 }
 
 // TranslateHtml 将传入的html中的文字翻译成对应的语言

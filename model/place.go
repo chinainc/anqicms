@@ -8,11 +8,6 @@ import (
 	"kandaoni.com/anqicms/config"
 )
 
-type ParentPlace struct {
-	Id    uint   `json:"id"`
-	Title string `json:"title"`
-}
-
 type Place struct {
 	Id          uint             `json:"id" gorm:"column:id;type:int(10) unsigned not null AUTO_INCREMENT;primaryKey"`
 	CreatedTime int64            `json:"created_time" gorm:"column:created_time;type:bigint(20);autoCreateTime;index:idx_created_time"`

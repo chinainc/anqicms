@@ -16,7 +16,6 @@ import (
 )
 
 type QiniuStorage struct {
-	token  string
 	cfg    *config.PluginStorageConfig
 	client *qbox.Mac
 }

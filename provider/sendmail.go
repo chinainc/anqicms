@@ -586,30 +586,6 @@ func (w *Website) SendNewSubscriberEmail(subscriber *model.Subscriber) error {
 	return w.SendMail(template.Subject, template.Content, nil, subscriber.Email)
 }
 
-func (w *Website) SendUserGroupChangeEmail(user *model.User, oldGroup *model.UserGroup) error {
-	if user.Email == "" {
-		return errors.New("no email")
-	}
-	template, exist := w.GetEmailTemplateInfo("group_change")
-	if !exist || !template.Open {
-		return errors.New("no template")
-	}
-	data := map[string]interface{}{
-		"website":  w,
-		"oldGroup": oldGroup,
-		"user":     user,
-	}
-	var err error
-	template, err = w.RenderEmailTemplate(template, data)
-	if err != nil {
-		return err
-	}
-
-	w.SendMail(template.Subject, template.Content, nil, user.Email)
-
-	return nil
-}
-
 func (w *Website) SendNewOrderEmail(user *model.User, order *model.Order) error {
 	if user == nil {
 		user = &model.User{}
@@ -668,22 +644,6 @@ func (w *Website) SendPayOrderEmail(user *model.User, order *model.Order) error 
 	_ = w.sendMail(template.Subject, template.Content, nil, nil, false, false)
 
 	return nil
-}
-
-func (w *Website) AddMailPlan(plan *model.MailPlan) error {
-	// 如果没开启邮件服务，则不添加计划
-	if w.PluginSendmail.Account == "" {
-		//成功配置，则跳过
-		return errors.New(w.Tr("PleaseConfigureSender"))
-	}
-	err := w.DB.Create(plan).Error
-	if err == nil {
-		// 添加到计划
-		if w.MailService != nil {
-			w.MailService.Add(plan)
-		}
-	}
-	return err
 }
 
 func (w *Website) CancelMailPlan(identifier string, isDel bool) error {

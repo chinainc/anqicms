@@ -435,22 +435,9 @@ func (w *Website) AutoMatchTag(archive *model.Archive) error {
 		matchedTagIds[m.TagId] = true
 	}
 
-	// 获取当前文档已有的 tagIds
-	// var existingTagIds []uint
-	// w.DB.WithContext(w.Ctx()).Model(&model.TagData{}).
-	// 	Where("`item_id` = ?", archive.Id).
-	// 	Pluck("tag_id", &existingTagIds)
-
-	// existingSet := make(map[uint]bool, len(existingTagIds))
-	// for _, id := range existingTagIds {
-	// 	existingSet[id] = true
-	// }
-
+	// 只做增量写入：文章改稿后不再匹配的旧 TagData 不会被清理（原清理逻辑已停用）。
 	// 添加新匹配的 tag
 	for tagId := range matchedTagIds {
-		// if existingSet[tagId] {
-		// 	continue
-		// }
 		tagData := model.TagData{
 			TagId:  tagId,
 			ItemId: archive.Id,
@@ -458,18 +445,6 @@ func (w *Website) AutoMatchTag(archive *model.Archive) error {
 		w.DB.Where("`item_id` = ? and `tag_id` = ?", archive.Id, tagId).
 			FirstOrCreate(&tagData)
 	}
-
-	// 删除不再匹配的 tag
-	// var toDelete []uint
-	// for _, id := range existingTagIds {
-	// 	if !matchedTagIds[id] {
-	// 		toDelete = append(toDelete, id)
-	// 	}
-	// }
-	// if len(toDelete) > 0 {
-	// 	w.DB.Where("`item_id` = ? and `tag_id` in(?)", archive.Id, toDelete).
-	// 		Delete(&model.TagData{})
-	// }
 
 	return nil
 }

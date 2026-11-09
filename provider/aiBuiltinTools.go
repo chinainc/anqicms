@@ -6,8 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"go/format"
-	"go/token"
 	"io"
 	"net/http"
 	"net/url"
@@ -89,16 +87,6 @@ type webFetchArgs struct {
 
 type webSearchArgs struct {
 	Query string `json:"query"`
-}
-
-type symbolArgs struct {
-	File    string `json:"file"`
-	Package string `json:"package"`
-	Symbol  string `json:"symbol"`
-}
-
-type importArgs struct {
-	File string `json:"file"`
 }
 
 // ---- Project root (safe boundary) ----
@@ -482,12 +470,12 @@ func (svc *AiChatService) getBuiltinEinoTools() ([]*schema.ToolInfo, map[string]
 			return "", fmt.Errorf("遍历文件失败: %w", err)
 		}
 
-	if len(allFiles) > 200 {
-		// 前缀「错误：」是协议层 isError 的判定依据（见 pkg/mcp/intent
-		// textFailureMarkers）——这里是**拒绝执行**、一个文件都没改，
-		// 不能让 AI 当成正常回执。改文案时务必保留前缀。
-		return "错误：" + fmt.Sprintf("匹配文件过多 (%d)，请缩小 glob 范围", len(allFiles)), nil
-	}
+		if len(allFiles) > 200 {
+			// 前缀「错误：」是协议层 isError 的判定依据（见 pkg/mcp/intent
+			// textFailureMarkers）——这里是**拒绝执行**、一个文件都没改，
+			// 不能让 AI 当成正常回执。改文案时务必保留前缀。
+			return "错误：" + fmt.Sprintf("匹配文件过多 (%d)，请缩小 glob 范围", len(allFiles)), nil
+		}
 		if len(allFiles) == 0 {
 			return "未找到匹配的文件", nil
 		}
@@ -1275,13 +1263,4 @@ func searchBing(ctx context.Context, query string) (string, error) {
 		return fmt.Sprintf("未找到关于 \"%s\" 的搜索结果，请尝试其他关键词", query), nil
 	}
 	return b.String(), nil
-}
-
-// renderNode renders an AST node back to formatted Go source string
-func renderNode(fset *token.FileSet, node any) string {
-	var buf bytes.Buffer
-	if err := format.Node(&buf, fset, node); err != nil {
-		return fmt.Sprintf("%v", node)
-	}
-	return buf.String()
 }

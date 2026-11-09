@@ -90,14 +90,6 @@ func capAccepts(c capContract, keys map[string]bool, name string) bool {
 	return false
 }
 
-// intentCovers 判断意图声明是否覆盖了 cap 的某个入参（含其别名）。
-func intentCovers(declared map[string]bool, c capContract, name string) bool {
-	if declared[name] {
-		return true
-	}
-	return declared[c.aliases[name]]
-}
-
 func intentByName(name string) (*intent.IntentSpec, bool) {
 	for _, s := range intent.IntentCatalog {
 		if s.Name == name {

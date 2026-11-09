@@ -65,16 +65,6 @@ func (s *Server) AddTool(tool *mcp.Tool, handler mcp.ToolHandler) error {
 	return nil
 }
 
-// AddTools registers multiple tools at once
-func (s *Server) AddTools(tools []ToolDef) error {
-	for _, td := range tools {
-		if err := s.AddTool(td.Tool, td.Handler); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // Stop gracefully shuts down the server
 func (s *Server) Stop(ctx context.Context) error {
 	s.logger.Info("shutting down MCP server")
@@ -90,11 +80,6 @@ type ToolDef struct {
 // GetServer returns the underlying mcp.Server (for advanced usage)
 func (s *Server) GetServer() *mcp.Server {
 	return s.mcpServer
-}
-
-// GetContext returns the server's context
-func (s *Server) GetContext() context.Context {
-	return s.ctx
 }
 
 // StreamableHTTPHandler 暴露本 Server 的 Streamable HTTP 端点。

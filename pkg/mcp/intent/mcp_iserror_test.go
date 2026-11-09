@@ -25,22 +25,22 @@ func TestIsErrorSetOnEndpointFailure(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "端点 5xx",
+			name:    "端点 5xx",
 			text:    `{"ok":false,"status":500,"msg":"","data":null,"code":0}`,
 			wantErr: true,
 		},
 		{
-			name: "端点 ok=false",
+			name:    "端点 ok=false",
 			text:    `{"ok":false,"status":200,"msg":"端点返回失败但未给出原因","data":null,"code":0}`,
 			wantErr: true,
 		},
 		{
-			name: "控制器层 code 非 0",
+			name:    "控制器层 code 非 0",
 			text:    `{"ok":true,"status":200,"code":0,"msg":"","data":{"code":-1,"msg":"record not found","data":null}}`,
 			wantErr: true,
 		},
 		{
-			name: "正常成功不应误报",
+			name:    "正常成功不应误报",
 			text:    `{"ok":true,"status":200,"code":0,"msg":"","data":{"list":[],"total":0,"page":1,"page_size":20,"count":0}}`,
 			wantErr: false,
 		},

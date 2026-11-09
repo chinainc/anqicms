@@ -74,7 +74,6 @@ func Request(urlPath string, options *Options) (*RequestData, error) {
 	//定义默认的refer
 	parsedUrl, err := url.Parse(urlPath)
 	if err != nil {
-		//log.Println(err)
 		return nil, err
 	}
 	parsedUrl.Path = ""
@@ -137,7 +136,6 @@ func Request(urlPath string, options *Options) (*RequestData, error) {
 			log.Println("获取页面编码失败: ", err.Error())
 		}
 		charsetName = strings.ToLower(charsetName)
-		//log.Println("当前页面编码:", charsetName)
 		charSet, _ := CharsetMap[charsetName]
 		if charSet != nil {
 			utf8Coutent, err := DecodeToUTF8([]byte(body), charSet)
@@ -165,7 +163,6 @@ func Request(urlPath string, options *Options) (*RequestData, error) {
 
 // getPageCharset 解析页面, 从中获取页面编码信息
 func getPageCharset(content, contentType string) (charSet string, err error) {
-	//log.Println("服务器返回编码：", contentType)
 	if contentType != "" {
 		matchedArray := charsetPattern.FindStringSubmatch(strings.ToLower(contentType))
 		if len(matchedArray) > 1 {
@@ -177,26 +174,22 @@ func getPageCharset(content, contentType string) (charSet string, err error) {
 			}
 		}
 	}
-	//log.Println("继续查找编码1")
 	var checkType string
 	reg := regexp.MustCompile(`(?is)<title[^>]*>(.*?)<\/title>`)
 	match := reg.FindStringSubmatch(content)
 	if len(match) > 1 {
 		_, checkType, _ = charset.DetermineEncoding([]byte(match[1]), "")
-		//log.Println("Title解析编码：", checkType)
 		if checkType == "utf-8" {
 			charSet = checkType
 			return
 		}
 	}
-	//log.Println("继续查找编码2")
 	reg = regexp.MustCompile(`(?is)<meta[^>]*charset\s*=["']?\s*([\w\d\-]+)`)
 	match = reg.FindStringSubmatch(content)
 	if len(match) > 1 {
 		charSet = match[1]
 		return
 	}
-	//log.Println("找不到编码")
 	charSet = "utf-8"
 	return
 }
@@ -210,7 +203,6 @@ func GetUserAgent(isMobile bool) string {
 }
 
 func GetURLData(url, refer string, timeout int) (*RequestData, error) {
-	//log.Println(url)
 	client := &http.Client{}
 	if timeout > 0 {
 		client.Timeout = time.Duration(timeout) * time.Second
@@ -239,7 +231,6 @@ func GetURLData(url, refer string, timeout int) (*RequestData, error) {
 			log.Println("获取页面编码失败: ", err.Error())
 		}
 		charsetName = strings.ToLower(charsetName)
-		//log.Println("当前页面编码:", charsetName)
 		charSet, exist := CharsetMap[charsetName]
 		if !exist {
 			log.Println("未找到匹配的编码")

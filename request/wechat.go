@@ -1,13 +1,5 @@
 package request
 
-type WechatMessageRequest struct {
-	Id        uint   `json:"id"`                 // 消息 ID
-	Openid    string `json:"openid"`             // 用户的 openid
-	Content   string `json:"content"`            // 用户发送的消息
-	Reply     string `json:"reply"`              // 自动（后台）回复的消息
-	ReplyTime int    `json:"reply_time" ast:"-"` // 回复时间
-}
-
 type WechatMessageReplyRequest struct {
 	Id    uint   `json:"id"`    // 消息 ID
 	Reply string `json:"reply"` // 自动（后台）回复的消息

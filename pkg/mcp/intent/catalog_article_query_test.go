@@ -46,8 +46,6 @@ func articleInvoker(t *testing.T, getResp, postResp string, captured *map[string
 	}
 }
 
-
-
 // TestListRejectsUnknownOrderBy 无效排序列必须报错，不能静默返回空列表。
 //
 // 实测：order_by="nonexistent_col" 返回 ok=true + list:[] + total:1856。
@@ -306,7 +304,6 @@ func TestListOnlyParamsStrippedOnNonListActions(t *testing.T) {
 	}
 }
 
-
 // sampleValFor 给不同类型的参数造一个合法样本值。
 func sampleValFor(k string) any {
 	switch k {
@@ -381,10 +378,10 @@ func TestArticleDescDocumentsNewGuarantees(t *testing.T) {
 		combined += "\n" + name + ":" + p.Desc
 	}
 	for _, want := range []string{
-		"标签/标记",         // 未传的关联字段保真
-		"不会静默返回空列表",   // order_by 白名单
-		"不会假成功",         // publish/delete 存在性校验
-		"moved_to_trash",   // 删除是入回收站而非物理删除
+		"标签/标记",          // 未传的关联字段保真
+		"不会静默返回空列表",      // order_by 白名单
+		"不会假成功",          // publish/delete 存在性校验
+		"moved_to_trash", // 删除是入回收站而非物理删除
 	} {
 		if !strings.Contains(combined, want) {
 			t.Errorf("工具+参数 desc 合起来缺少关键承诺 %q", want)
@@ -452,7 +449,7 @@ func TestArticleParamsKeepUniqueSemantics(t *testing.T) {
 		// draft 与publish 的关系：draft=false 即发布，省一次调用。
 		"draft": {"false=发布", "preview=true"},
 		// 排序参数的非法值行为：报错而非静默返回空列表。
-		"order_by": {"推荐"},
+		"order_by":  {"推荐"},
 		"order_dir": {"asc", "desc"},
 	}
 

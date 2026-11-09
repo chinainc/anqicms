@@ -31,7 +31,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"strings"
 	"time"
@@ -518,69 +517,6 @@ func truncateJSON(v any) string {
 		s = s[:240] + "…"
 	}
 	return s
-}
-
-// rawProbe 直接投递一次请求，剥掉 HTML 标签后返回可见文本，
-// 用于在 404/提示页场景下看清真实原因（响应体常被截断，看不到提示文案）。
-func rawProbe(app *iris.Application, site *provider.Website, adminId uint, path string) string {
-	target := path
-	if !strings.HasPrefix(target, "/") {
-		target = "/" + target
-	}
-	if !strings.HasPrefix(target, "/system/api") {
-		target = "/system/api" + target
-	}
-	req, err := http.NewRequest("GET", target, nil)
-	if err != nil {
-		return ""
-	}
-	req.Host = adminHostForLog(site)
-	req.Header.Set("X-Host", adminHostForLog(site))
-	req.Header.Set("admin", site.GetAdminAuthToken(adminId, true))
-	rec := httptest.NewRecorder()
-	app.ServeHTTP(rec, req)
-
-	body := rec.Body.String()
-	if i := strings.Index(body, "<body"); i >= 0 {
-		body = body[i:]
-	}
-	// 去标签，只留可见文本
-	var b strings.Builder
-	for _, r := range body {
-		if r == '<' {
-			b.WriteRune(' ')
-			continue
-		}
-		if r == '>' {
-			continue
-		}
-		b.WriteRune(r)
-	}
-	text := strings.Join(strings.Fields(b.String()), " ")
-	if len(text) > 260 {
-		text = text[:260]
-	}
-	return fmt.Sprintf("[status=%d] %s", rec.Code, text)
-}
-
-// adminHostForLog 复算一次投递用的 host，便于在 404 时排查站点匹配问题。
-func adminHostForLog(site *provider.Website) string {
-	if site == nil || site.System == nil {
-		return "localhost"
-	}
-	for _, raw := range []string{site.System.AdminUrl, site.System.BaseUrl} {
-		if !strings.HasPrefix(raw, "http") {
-			continue
-		}
-		if i := strings.Index(raw, "://"); i >= 0 {
-			rest := raw[i+3:]
-			if j := strings.IndexAny(rest, "/:"); j >= 0 {
-				return rest[:j]
-			}
-			return rest
-		}
-	}
-	return "localhost"
 }
 
 func mask(s string) string {

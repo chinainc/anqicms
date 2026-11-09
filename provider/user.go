@@ -573,7 +573,6 @@ func (w *Website) LoginViaWeapp(req *request.ApiLoginRequest) (*model.User, erro
 	if err != nil {
 		return nil, err
 	}
-	//log.Printf("%#v", loginRs)
 	if loginRs.OpenID == "" {
 		//openid 不在？
 		return nil, errors.New(w.Tr("UnableToObtainOpenid"))
@@ -978,13 +977,6 @@ func (w *Website) GetUserDiscount(userId uint, user *model.User) (discount, ship
 	}
 
 	return discount, shippingDiscount
-}
-
-func (w *Website) GetUserFields() []*config.CustomField {
-	//这里有默认的设置
-	fields := w.PluginUser.Fields
-
-	return fields
 }
 
 func (w *Website) MigrateUserTable(fields []*config.CustomField, focus bool) {

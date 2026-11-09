@@ -158,9 +158,9 @@ func TestCommerceUserUpdateIsPartialUpdate(t *testing.T) {
 func TestFsGlobDescAdvertisesSupportedSyntax(t *testing.T) {
 	spec := mustSpec(t, "fs_glob")
 	mustHaveAll(t, "fs_glob.Desc", spec.Desc,
-		"文件名模式",   // 不含 / 的写法
-		"路径模式",     // 含 / 的写法
-		"跨任意层级",   // ** 的语义
+		"文件名模式", // 不含 / 的写法
+		"路径模式",  // 含 / 的写法
+		"跨任意层级", // ** 的语义
 	)
 	// 不能再说「不支持 / 或 **」——那是修复前的临时描述
 	for _, bad := range []string{"既不认目录前缀", "不要用 **", "不要带目录前缀"} {

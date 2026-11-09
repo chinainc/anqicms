@@ -59,21 +59,6 @@ const (
 	RetryLayerPartial
 )
 
-func (l RetryLayer) String() string {
-	switch l {
-	case RetryLayerTransport:
-		return "transport"
-	case RetryLayerOpen:
-		return "open"
-	case RetryLayerStream:
-		return "stream"
-	case RetryLayerPartial:
-		return "partial"
-	default:
-		return "none"
-	}
-}
-
 // ClassifyError 将错误分类到对应的重试层。
 func ClassifyError(err error) RetryLayer {
 	if err == nil {

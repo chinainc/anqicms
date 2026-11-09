@@ -100,12 +100,12 @@ func TestAgentComposeEditRoutesToAgentEdit(t *testing.T) {
 	c := &captureInvoker{}
 	compose := agentCompose()
 	_, err := compose(context.Background(), map[string]any{
-		"action":   "manage_edit",
-		"id":       3,
-		"title":    "改名后的标题",
-		"prompt":   "新的策略内容",
-		"cron":     "0 9 * * *",
-		"enabled":  1,
+		"action":  "manage_edit",
+		"id":      3,
+		"title":   "改名后的标题",
+		"prompt":  "新的策略内容",
+		"cron":    "0 9 * * *",
+		"enabled": 1,
 	}, c.invoke)
 	if err != nil {
 		t.Fatalf("执行失败: %v", err)

@@ -197,12 +197,6 @@ var capEndpoints = map[string]capEndpoint{
 	"anqi_info":    {Method: "GET", Path: "/anqi/info"},
 }
 
-// capEndpointOf 返回能力对应的端点；ok=false 表示必须回落到能力 handler。
-func capEndpointOf(name string) (capEndpoint, bool) {
-	ep, ok := capEndpoints[name]
-	return ep, ok
-}
-
 // CapEndpoint 是 capEndpoint 的导出视图，供包外校验/审计读取本表。
 type CapEndpoint struct {
 	Method   string

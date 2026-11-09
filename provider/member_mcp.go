@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
@@ -797,13 +796,6 @@ func memberArchivePayload(w *Website, archive *model.Archive) map[string]any {
 	}
 
 	return out
-}
-
-// memberMcpLog 便于排查（工具名 + 会员）
-func memberMcpLog(userId uint, tool string, err error) {
-	if err != nil {
-		slog.Warn("member mcp tool failed", "userId", userId, "tool", tool, "error", err)
-	}
 }
 
 // memberOrderTitle 订单展示标题：取第一条明细的商品标题，缺失时退回备注

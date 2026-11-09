@@ -109,15 +109,6 @@ func (m *SubagentManager) AddResult(r *SubagentResult) {
 	m.results = append(m.results, r)
 }
 
-// GetResults 返回所有子任务结果
-func (m *SubagentManager) GetResults() []*SubagentResult {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	out := make([]*SubagentResult, len(m.results))
-	copy(out, m.results)
-	return out
-}
-
 // ================================================================
 // Subagent 执行逻辑
 // ================================================================
@@ -498,19 +489,6 @@ func buildSubagentSystemPrompt(task *SubagentTask) string {
 // ================================================================
 // `task` 工具: 模型派发并行子任务
 // ================================================================
-
-// TaskToolArgs `task` 工具的参数
-type TaskToolArgs struct {
-	Tasks []SubagentTaskSpec `json:"tasks"`
-}
-
-// SubagentTaskSpec 子任务规格 (来自模型的 JSON 参数)
-type SubagentTaskSpec struct {
-	Description string   `json:"description" desc:"3-5 词任务标签"`
-	Prompt      string   `json:"prompt" desc:"子任务完整指令"`
-	Type        string   `json:"type" desc:"explore (只读) 或 worker (可写)"`
-	Scope       []string `json:"scope,omitempty" desc:"worker 允许写的文件 scope (globs)"`
-}
 
 // DispatchTasks 并行派发多个子任务，等待全部完成后返回汇总结果。
 //

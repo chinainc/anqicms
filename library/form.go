@@ -22,11 +22,6 @@ func NewForm(form url.Values) *FormData {
 	}
 }
 
-// Reset initializes the FormData
-func (input *FormData) Reset() {
-	input.form = nil
-}
-
 // Query returns input data item string by a given string.
 func (input *FormData) Query(key string) string {
 	return input.form.Get(key)

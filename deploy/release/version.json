@@ -1,29 +1,29 @@
 {
     "name":  "anqicms",
-    "version":  "3.6.8",
-    "date":  "2026-10-22",
-    "url":  "anqicms-v3.6.8.zip",
-    "checksum":  "sha256:f71c77a9f53728966c72001ce3245ea4d43af037cb196516aad81d21a5c9155c",
-    "note":  "3.6.8：新增前台会员中心（首页/资料/密码/消息/收藏/评论/积分/财务/充值/提现/订单/发布与已发布/评价/销售/邀请/实名认证/接口令牌/购物车/店铺）与店铺展示、装修配置；新增全站搜索框（居中收窄，含移动端）；新增后台「可视化装修」（区块拖拽排序 + 实时预览 + 前台渲染）；后台新增「上传升级包」与「用户实名认证审核」；新增 anqicms-cli 命令行工具。",
+    "version":  "3.6.9",
+    "date":  "2026-11-09",
+    "url":  "anqicms-v3.6.9.zip",
+    "checksum":  "sha256:17d2de7787dd70e71abd7573de24b8b5a8a7354b7fb291696132231a4e0543ed",
+    "note":  "3.6.9：新增商家工作台（/business，程序自带静态页面，页面与资源随完整安装包分发）；清理未使用的历史函数与死代码约 2400 行（翻译/推送/标签 SQL/旧 AI 技能等已停用实现），统一结构体 tag 与代码缩进。",
     "sql":  [
 
             ],
     "packages":  {
                      "windows":  {
-                                     "url":  "anqicms-v3.6.8-windows-upgrade.zip",
-                                     "checksum":  "sha256:f71c77a9f53728966c72001ce3245ea4d43af037cb196516aad81d21a5c9155c"
+                                     "url":  "anqicms-v3.6.9-windows-upgrade.zip",
+                                     "checksum":  "sha256:17d2de7787dd70e71abd7573de24b8b5a8a7354b7fb291696132231a4e0543ed"
                                  },
                      "linux":  {
-                                   "url":  "anqicms-v3.6.8-linux-upgrade.zip",
-                                   "checksum":  "sha256:658ca108d2ffc1b7c53e0873d2ca4b0a54364c195008ce0425e767de17cf50bc"
+                                   "url":  "anqicms-v3.6.9-linux-upgrade.zip",
+                                   "checksum":  "sha256:dbd93a5b55aaac640592b6eeee26c85f9ba87bd45290f1a835ea84d116305f76"
                                }
                  },
     "install":  {
-                    "windows_file":  "anqicms-v3.6.8-windows.zip",
-                    "windows_sha256":  "b5494b407485da89c489c633b521473baabb13b08b084139eacbb806664dbbb1",
-                    "linux_amd64_file":  "anqicms-v3.6.8-linux-amd64.tar.gz",
-                    "linux_amd64_sha256":  "ff89fd778f7970b4d435894018f673c03902e62adeb04e597ceb770f405ce7a6",
-                    "linux_arm64_file":  "anqicms-v3.6.8-linux-arm64.tar.gz",
-                    "linux_arm64_sha256":  "84133f5180de0d1c9127ea6e2177913369dbaa6f7891a942d72ce8a00664863b"
+                    "windows_file":  "anqicms-v3.6.9-windows.zip",
+                    "windows_sha256":  "7ed965f13deebb5b90dd9b5e9b4b7ed52b21bcc1583740d995f330986b612735",
+                    "linux_amd64_file":  "anqicms-v3.6.9-linux-amd64.tar.gz",
+                    "linux_amd64_sha256":  "8e8b0bcca907c23d94021c95d1f9311e6a46270e423f84c4d63cdf02ca8f8580",
+                    "linux_arm64_file":  "anqicms-v3.6.9-linux-arm64.tar.gz",
+                    "linux_arm64_sha256":  "9f5c165474fd7f319f75d09cb32fd64ee21d9bcac803e6848bfb22a3f63fd9e3"
                 }
 }

@@ -57,10 +57,6 @@ func (w *Website) NewBackup() (*BackupStatus, error) {
 	return backupStatus, nil
 }
 
-func (bs *BackupStatus) dumpTableSchema(tableName string, file *os.File) error {
-	return bs.dumpTableSchemaTo(tableName, file)
-}
-
 func (bs *BackupStatus) dumpTableSchemaTo(tableName string, writer io.Writer) error {
 	var data string
 	err := bs.w.DB.Raw(fmt.Sprintf("SHOW CREATE TABLE `%s`.`%s`", bs.w.Mysql.Database, tableName)).Row().Scan(&tableName, &data)
@@ -94,10 +90,6 @@ func (bs *BackupStatus) dumpTableSchemaTo(tableName string, writer io.Writer) er
 	data = data + "\n\n"
 	_, err = io.WriteString(writer, data)
 	return err
-}
-
-func (bs *BackupStatus) dumpTable(table string, file *os.File) (err error) {
-	return bs.dumpTableTo(table, file)
 }
 
 func (bs *BackupStatus) dumpTableTo(table string, writer io.Writer) (err error) {
@@ -354,7 +346,6 @@ func (bs *BackupStatus) restoreFromSQL(backupFile string) error {
 		if err == io.EOF {
 			isEOF = true
 		}
-		//log.Println("is eof", isEOF)
 		tmpStr += line
 		if strings.HasSuffix(line, ";\n") || isEOF {
 			curSize += int64(len(tmpStr))

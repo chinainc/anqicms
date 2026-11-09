@@ -106,10 +106,6 @@ type AnqiTranslateTextRequest struct {
 	OriginContent string `json:"origin_content"`
 }
 
-type AnqiAiPlanRequest struct {
-	ReqId int64 `json:"req_id"`
-}
-
 // AnqiAiResult 是结合了2中结构体的内容，一种是plan，一种是article
 type AnqiAiResult struct {
 	Id          int64  `json:"id"`
@@ -161,11 +157,6 @@ type AnqiExtractResult struct {
 	Data []string `json:"data"`
 }
 
-type AnqiAiChatResult struct {
-	Status  int    `json:"status"`
-	Content string `json:"content"`
-}
-
 type AnqiTranslateHtmlRequest struct {
 	Uri         string   `json:"uri"`
 	Html        string   `json:"html"`
@@ -184,12 +175,6 @@ type AnqiTranslateHtmlResult struct {
 	Count      int64  `json:"count"` // 总量
 	Usage      int64  `json:"usage"` // 用量
 	Remark     string `json:"remark"`
-}
-
-type AnqiTranslateHtmlResponse struct {
-	Code int                     `json:"code"`
-	Msg  string                  `json:"msg"`
-	Data AnqiTranslateHtmlResult `json:"data"`
 }
 
 type AnqiTranslateTextResponse struct {
@@ -561,7 +546,6 @@ func (w *Website) AnqiAiGenerateArticle(keyword *model.Keyword) (int, error) {
 	// 检查是否生成过
 	_, err := w.GetAiArticlePlanByKeyword(config.AiArticleTypeGenerate, keyword.Title)
 	if err == nil {
-		//log.Println("已存在于数据库", keyword.Title)
 		return 1, nil
 	}
 

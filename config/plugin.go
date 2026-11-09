@@ -3,7 +3,6 @@ package config
 import (
 	"net/url"
 	"strings"
-	"sync"
 )
 
 type CodeItem struct {
@@ -268,7 +267,6 @@ type MultiLangSite struct {
 }
 
 type PluginMultiLangConfig struct {
-	mu              *sync.Mutex     `json:"-"`
 	Open            bool            `json:"open"`                     // 是否启用
 	Type            string          `json:"type"`                     // 多语言路由类型：domain=子域名，directory=子目录，same=相同链接，按浏览器Cookie/Session识别语言
 	DefaultLanguage string          `json:"default_language" ast:"-"` // 该语言只是调用系统的设置
@@ -301,13 +299,6 @@ type EmailTemplate struct {
 	Delay       int64  `json:"delay"`       // 延迟多少秒发送
 	Subject     string `json:"subject"`     // 邮件标题
 	Content     string `json:"content"`     // 邮件内容
-}
-
-type CommunicationConfig struct {
-	SummitedTemplate EmailTemplate  `json:"summited_template"` // 提交成功模板
-	QuoteTemplate    EmailTemplate  `json:"quote_template"`    // 报价模板
-	ReplyTemplate    EmailTemplate  `json:"reply_template"`    // 消息回复模板
-	OrderFields      []*CustomField `json:"order_fields"`      // 需要哪些自定义字段
 }
 
 func (pm *PluginMultiLangConfig) GetUrl(oriUrl string, baseUrl string, langSite *MultiLangSite) string {

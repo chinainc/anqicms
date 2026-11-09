@@ -74,7 +74,7 @@ func TestHasStoragePrefix(t *testing.T) {
 		"https://cdn.a.com/",
 		"http://cdn.a.com/uploads/x.webp", // 历史数据里协议不一致
 		"//cdn.a.com/uploads/x.webp",
-		"https://cdn.a.com",             // 只有前缀本身
+		"https://cdn.a.com", // 只有前缀本身
 	}
 	for _, in := range yes {
 		if !HasStoragePrefix(in, base) {
@@ -109,13 +109,13 @@ func TestHasStoragePrefix(t *testing.T) {
 func TestStripStorageUrl(t *testing.T) {
 	base := "https://cdn.a.com"
 	cases := map[string]string{
-		"https://cdn.a.com/uploads/x.webp":     "/uploads/x.webp",
-		"http://cdn.a.com/uploads/x.webp":      "/uploads/x.webp",
-		"https://cdn.a.com":                    "",
-		"https://other.com/uploads/x.webp":     "https://other.com/uploads/x.webp", // 外链原样返回，不截断
-		"https://cdn.a.com.cn/uploads/x.webp":  "https://cdn.a.com.cn/uploads/x.webp",
-		"/uploads/x.webp":                      "/uploads/x.webp",
-		"":                                     "",
+		"https://cdn.a.com/uploads/x.webp":    "/uploads/x.webp",
+		"http://cdn.a.com/uploads/x.webp":     "/uploads/x.webp",
+		"https://cdn.a.com":                   "",
+		"https://other.com/uploads/x.webp":    "https://other.com/uploads/x.webp", // 外链原样返回，不截断
+		"https://cdn.a.com.cn/uploads/x.webp": "https://cdn.a.com.cn/uploads/x.webp",
+		"/uploads/x.webp":                     "/uploads/x.webp",
+		"":                                    "",
 	}
 	for in, want := range cases {
 		if got := StripStorageUrl(in, base); got != want {
@@ -135,9 +135,9 @@ func TestIsLocalResource(t *testing.T) {
 		base string
 		want bool
 	}{
-		{"uploads/x.webp", "", true},   // 相对路径一定是本站
-		{"/uploads/x.webp", "", true},  // 资源地址为空也要能出缩略图
-		{"https://other.com/x.webp", "", false},                     // ⚠️ 关键：不能再拼出 other.com/thumb_x.webp
+		{"uploads/x.webp", "", true},            // 相对路径一定是本站
+		{"/uploads/x.webp", "", true},           // 资源地址为空也要能出缩略图
+		{"https://other.com/x.webp", "", false}, // ⚠️ 关键：不能再拼出 other.com/thumb_x.webp
 		{"https://other.com/x.webp", base, false},
 		{"https://cdn.a.com/uploads/x.webp", base, true},
 		{"//cdn.a.com/uploads/x.webp", base, true},

@@ -57,9 +57,9 @@ func PluginDiySave(ctx iris.Context) {
 	currentSite := provider.CurrentSite(ctx)
 
 	var req struct {
-		Key     string                `json:"key"`
-		Title   string                `json:"title"`
-		Modules []provider.DiyModule  `json:"modules"`
+		Key     string               `json:"key"`
+		Title   string               `json:"title"`
+		Modules []provider.DiyModule `json:"modules"`
 	}
 	if err := ctx.ReadJSON(&req); err != nil {
 		ctx.JSON(iris.Map{"code": config.StatusFailed, "msg": err.Error()})
@@ -79,9 +79,9 @@ func PluginDiySave(ctx iris.Context) {
 		"code": config.StatusOK,
 		"msg":  ctx.Tr("SavedSuccessfully"),
 		"data": iris.Map{
-			"key":     req.Key,
-			"count":   len(req.Modules),
-			"bytes":   len(raw),
+			"key":   req.Key,
+			"count": len(req.Modules),
+			"bytes": len(raw),
 		},
 	})
 }

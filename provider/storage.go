@@ -41,7 +41,6 @@ func (w *Website) GetBucket(cfg *config.PluginStorageConfig) (storage.Storage, e
 }
 
 func (w *Website) UploadFile(location string, r io.Reader) (string, error) {
-	//log.Println("存储到", w.PluginStorage.StorageType)
 	location = strings.TrimLeft(location, "/")
 
 	// 如果需要保留本地副本，先写入本地，再从本地重新读取用于远程上传
@@ -68,7 +67,6 @@ func (w *Website) UploadFile(location string, r io.Reader) (string, error) {
 	}
 
 	err := w.Storage.Put(context.Background(), location, r)
-	// log.Println("上传结果", err, location)
 	if err != nil {
 		return "", err
 	}
@@ -80,7 +78,6 @@ func (w *Website) UploadFile(location string, r io.Reader) (string, error) {
 }
 
 func (w *Website) DeleteFile(location string) error {
-	//log.Println("存储到", w.PluginStorage.StorageType)
 	location = strings.TrimLeft(location, "/")
 	// 额外存储一份到本地
 	if w.PluginStorage.KeepLocal && w.PluginStorage.StorageType != config.StorageTypeLocal {
@@ -102,7 +99,6 @@ func (w *Website) DeleteFile(location string) error {
 }
 
 func (w *Website) MoveFile(src, dest string) error {
-	//log.Println("存储到", w.PluginStorage.StorageType)
 	src = strings.TrimLeft(src, "/")
 	dest = strings.TrimLeft(dest, "/")
 

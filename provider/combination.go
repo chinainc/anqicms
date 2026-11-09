@@ -41,7 +41,6 @@ var sogouForbid = false
 func (w *Website) GenerateCombination(keyword *model.Keyword) (int, error) {
 	// 检查是否采集过
 	if w.checkArticleExists(keyword.Title, "", "") {
-		//log.Println("已存在于数据库", keyword.Title)
 		return 1, nil
 	}
 	// 检查是否已经有素材
@@ -346,7 +345,6 @@ func (w *Website) getDataFrom360(keyword *model.Keyword) ([]*model.Material, err
 			}()
 			// 逐个解析内容
 			item, fetch, err2 := w.getAnswerSection(link, title, keyword)
-			//log.Println(item, err2)
 			if err2 == nil {
 				count++
 				links = append(links, item)
@@ -465,7 +463,6 @@ func (w *Website) getDataFromSogou(keyword *model.Keyword) ([]*model.Material, e
 			}()
 			// 逐个解析内容
 			item, fetch, err2 := w.getAnswerSection(link, title, keyword)
-			//log.Println(item, err2)
 			if err2 == nil {
 				count++
 				links = append(links, item)
@@ -605,7 +602,6 @@ func (w *Website) getAnswerSection(link, title string, keyword *model.Keyword) (
 	}
 	doc.Find("script,style").Remove()
 	var item model.Material
-	//log.Println(body)
 	h1 := doc.Find("h1")
 	h1.Find("*").Remove()
 	item.Title = strings.TrimSpace(h1.Text())

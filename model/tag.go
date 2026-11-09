@@ -4,7 +4,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gorm.io/gorm"
 	"kandaoni.com/anqicms/config"
 )
 
@@ -62,11 +61,4 @@ func (tag *Tag) GetThumb(storageUrl, defaultThumb string) string {
 	}
 
 	return tag.Thumb
-}
-
-func GetNextTagId(tx *gorm.DB) uint {
-	var lastId int64
-	tx.Model(Tag{}).Order("id desc").Limit(1).Pluck("id", &lastId)
-
-	return uint(lastId) + 1
 }

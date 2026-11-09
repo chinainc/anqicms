@@ -24,15 +24,6 @@ type ElasticSearchService struct {
 	client    *http.Client
 }
 
-type ElasticIndexProperty struct {
-	Type          string `json:"type"`
-	Index         bool   `json:"index"`
-	Store         bool   `json:"store,omitempty"`
-	Sortable      bool   `json:"sortable,omitempty"`
-	Highlightable bool   `json:"highlightable,omitempty"`
-	Aggregatable  bool   `json:"aggregatable,omitempty"`
-}
-
 func NewElasticSearchService(cfg *config.PluginFulltextConfig, indexName string) (Service, error) {
 	baseUrl := strings.TrimRight(cfg.EngineUrl, "/")
 	s := &ElasticSearchService{

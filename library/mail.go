@@ -8,14 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"mime"
 	"mime/multipart"
 	"net"
 	"net/mail"
 	"net/smtp"
 	"net/textproto"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -146,26 +143,6 @@ func (e *Email) Bytes() ([]byte, error) {
 		return nil, err
 	}
 	return buff.Bytes(), nil
-}
-
-// Add attach file to the send mail
-func (e *Email) AttachFile(args ...string) (a *Attachment, err error) {
-	if len(args) < 1 && len(args) > 2 {
-		err = errors.New("Must specify a file name and number of parameters can not exceed at least two")
-		return
-	}
-	filename := args[0]
-	id := ""
-	if len(args) > 1 {
-		id = args[1]
-	}
-	f, err := os.Open(filename)
-	if err != nil {
-		return
-	}
-	ct := mime.TypeByExtension(filepath.Ext(filename))
-	basename := filepath.Base(filename)
-	return e.Attach(f, basename, ct, id)
 }
 
 // Attach is used to attach content from an io.Reader to the email.

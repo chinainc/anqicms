@@ -24,31 +24,6 @@ type ServerJson struct {
 	Sparks map[string]SparkSetting `json:"sparks"`
 }
 
-type ConfigJson struct {
-	//setting
-	System  SystemConfig  `json:"system"`
-	Content ContentConfig `json:"content"`
-	Index   IndexConfig   `json:"index"`
-	Contact ContactConfig `json:"contact"`
-	Safe    SafeConfig    `json:"safe"`
-	//plugin
-	PluginPush        PluginPushConfig      `json:"plugin_push"`
-	PluginSitemap     PluginSitemapConfig   `json:"plugin_sitemap"`
-	PluginRewrite     PluginRewriteConfig   `json:"plugin_rewrite"`
-	PluginAnchor      PluginAnchorConfig    `json:"plugin_anchor"`
-	PluginGuestbook   PluginGuestbookConfig `json:"plugin_guestbook"`
-	PluginUploadFiles []PluginUploadFile    `json:"plugin_upload_file"`
-	PluginSendmail    PluginSendmail        `json:"plugin_sendmail"`
-	PluginImportApi   PluginImportApiConfig `json:"plugin_import_api"`
-	PluginStorage     PluginStorageConfig   `json:"plugin_storage"`
-	PluginWeapp       PluginWeappConfig     `json:"plugin_weapp"`
-	PluginWechat      PluginWeappConfig     `json:"plugin_wechat"`
-	PluginRetailer    PluginRetailerConfig  `json:"plugin_retailer"`
-	PluginUser        PluginUserConfig      `json:"plugin_user"`
-	PluginOrder       PluginOrderConfig     `json:"plugin_order"`
-	PluginFulltext    PluginFulltextConfig  `json:"plugin_fulltext"`
-}
-
 func initPath() {
 	sep := string(os.PathSeparator)
 	ExecPath, _ = os.Executable()

@@ -181,7 +181,6 @@ func (k *KeywordCollect) collectKeyword(keyword *model.Keyword, fix bool) (int, 
 	}
 	links := k.CollectKeywords(resp.Body, link)
 	for _, l := range links {
-		//log.Println(l.Title)
 		// 判断是否包含核心词
 		if !k.ContainRootWords(l.Title) {
 			log.Println(l.Title, "不包含核心词")

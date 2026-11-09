@@ -130,49 +130,6 @@ func (w *Website) AkismentCheck(ctx iris.Context, checkType int, data interface{
 	if w.AkismetClient == nil {
 		return 1, false
 	}
-	// 没有来路
-	//if !ctx.IsAjax() && ctx.Request().Referer() == "" {
-	//	return 2, true
-	//}
-	//// 非标准单词
-	//if checkType == CheckTypeGuestbook {
-	//	guestbook, ok := data.(*model.Guestbook)
-	//	if ok {
-	//		var checkData []string
-	//		if guestbook.Contact != "" && CheckContentIsEnglish(guestbook.Contact) {
-	//			checkData = append(checkData, guestbook.Contact)
-	//		}
-	//		if guestbook.Content != "" && CheckContentIsEnglish(guestbook.Content) {
-	//			checkData = append(checkData, guestbook.Content)
-	//		}
-	//		if guestbook.UserName != "" && CheckContentIsEnglish(guestbook.UserName) {
-	//			checkData = append(checkData, guestbook.UserName)
-	//		}
-	//		for _, v := range checkData {
-	//			// 纯数字的不检测
-	//			matched, _ := regexp.MatchString(`^[0-9\s\-]+$`, v)
-	//			if matched {
-	//				continue
-	//			}
-	//			// 大写字母占比过大
-	//			upperCount := 0
-	//			for _, vv := range v {
-	//				if unicode.IsUpper(vv) {
-	//					upperCount++
-	//				}
-	//			}
-	//			upperPercent := float64(upperCount) / float64(len(v))
-	//			if upperPercent > 0.3 && upperPercent < 0.9 {
-	//				return 2, true
-	//			}
-	//			// 未包含元音
-	//			if !strings.ContainsAny(v, "aeiouAEIOU") {
-	//				return 2, true
-	//			}
-	//		}
-	//	}
-	//}
-	// end
 	var needCheck = func(checkType int) bool {
 		if checkType == CheckTypeGuestbook && len(w.AkismetClient.CheckType) == 0 {
 			return true
@@ -422,66 +379,6 @@ func (c *AkismetClient) CheckComment(ctx context.Context, comment *AkismentComme
 	}
 
 	return nil, fmt.Errorf("akismet: error from the server: %s", respBody)
-}
-
-// SubmitHam submits false-positives - items that were incorrectly classified as spam by Akismet.
-func (c *AkismetClient) SubmitHam(ctx context.Context, comment *AkismentComment) error {
-	// build the request.
-	u, err := c.resolvePath("1.1/submit-ham")
-	if err != nil {
-		return err
-	}
-	form := c.buildCommentForm(comment)
-	body := strings.NewReader(form.Encode())
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), body)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	// send the request.
-	resp, err := c.do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	// parse the response
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("akismet: unexpected status code: %d", resp.StatusCode)
-	}
-	io.Copy(io.Discard, resp.Body)
-	return nil
-}
-
-// SubmitSpam submits comments that weren’t marked as spam but should have been.
-func (c *AkismetClient) SubmitSpam(ctx context.Context, comment *AkismentComment) error {
-	// build the request.
-	u, err := c.resolvePath("1.1/submit-spam")
-	if err != nil {
-		return err
-	}
-	form := c.buildCommentForm(comment)
-	body := strings.NewReader(form.Encode())
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), body)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	// send the request.
-	resp, err := c.do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	// parse the response
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("akismet: unexpected status code: %d", resp.StatusCode)
-	}
-	io.Copy(io.Discard, resp.Body)
-	return nil
 }
 
 func (c *AkismetClient) resolvePath(path string) (*url.URL, error) {

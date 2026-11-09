@@ -16,7 +16,6 @@ func HandlerTimeout(ctx iris.Context) {
 	go func() {
 		<-timeoutCtx.Done()
 		//ed := time.Now().Unix()
-		//log.Println("timeout request spend:", ed-st)
 		if errors.Is(timeoutCtx.Err(), context.DeadlineExceeded) {
 			ctx.StatusCode(iris.StatusRequestTimeout)
 			ctx.StopExecution()

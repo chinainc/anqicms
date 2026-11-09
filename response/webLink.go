@@ -6,4 +6,3 @@ type WebLink struct {
 	OriginUrl string `json:"origin_url"`
 	Content   string `json:"content"`
 }
-

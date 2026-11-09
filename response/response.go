@@ -2,13 +2,6 @@ package response
 
 import "time"
 
-type AuthResponse struct {
-	HashKey     string `json:"hash_key"`
-	CreatedTime int64  `json:"created_time"`
-	Code        string `json:"code"`
-	Status      int    `json:"status"`
-}
-
 type SumAmount struct {
 	Total int64 `json:"total"`
 }

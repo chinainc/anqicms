@@ -196,20 +196,6 @@ func (w *Website) AddFulltextIndex(doc fulltext.TinyArchive) {
 	_ = w.searcher.Create(doc)
 }
 
-func (w *Website) UpdateFulltextIndex(doc fulltext.TinyArchive) {
-	if w.searcher == nil {
-		return
-	}
-	if w.PluginFulltext.UseContent && doc.Content != "" {
-		// 内容搜索的时候，需要去除html标签
-		doc.Content = library.StripTags(doc.Content)
-	} else if w.PluginFulltext.UseContent == false {
-		// 移除
-		doc.Content = ""
-	}
-	_ = w.searcher.Update(doc)
-}
-
 func (w *Website) BulkFulltextIndex(docs []fulltext.TinyArchive) {
 	if w.searcher == nil {
 		return

@@ -90,8 +90,3 @@ func (t ChatTuning) Normalized() ChatTuning {
 	}
 	return out
 }
-
-// DefaultChatTuning 返回全部取默认值的配置。
-func DefaultChatTuning() ChatTuning {
-	return ChatTuning{}.Normalized()
-}

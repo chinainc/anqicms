@@ -555,13 +555,6 @@ func (svc *AiChatService) ListSessions() []iris.Map {
 	return result
 }
 
-// CloseSession closes and removes a session
-func (svc *AiChatService) CloseSession(sessionID string) {
-	svc.mu.Lock()
-	defer svc.mu.Unlock()
-	delete(svc.sessions, sessionID)
-}
-
 // ================================================================
 //  Agent 调度器
 // ================================================================
@@ -637,14 +630,6 @@ func (svc *AiChatService) StartAgentScheduler() {
 		}
 	}()
 	svc.Logger.Info("Agent scheduler started")
-}
-
-// StopAgentScheduler 停止后台调度器
-func (svc *AiChatService) StopAgentScheduler() {
-	if svc.schedulerQuit != nil {
-		close(svc.schedulerQuit)
-		svc.schedulerQuit = nil
-	}
 }
 
 // checkDueAgents 检查并执行到期的 Agent
@@ -1025,19 +1010,6 @@ func (svc *AiChatService) GetAgentBySessionID(sessionID string) *model.AiAgent {
 		}
 	}
 	return nil
-}
-
-// GetEinoTools returns all Eino tool definitions and their handlers, including
-// built-in tools. This exposes the full tool set so callers (e.g. the chat
-// controller) can bind every available tool to the model up-front.
-func (svc *AiChatService) GetEinoTools() ([]*schema.ToolInfo, map[string]toolHandler) {
-	tools, handlers := svc.getEinoTools()
-	builtinTools, builtinHandlers := svc.getBuiltinEinoTools()
-	tools = append(tools, builtinTools...)
-	for name, handler := range builtinHandlers {
-		handlers[name] = handler
-	}
-	return tools, handlers
 }
 
 // ResolveCap 取出可供意图委托调用的底层能力 handler。

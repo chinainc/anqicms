@@ -51,20 +51,6 @@ func (w *Website) GetArchiveByIdFromCache(id int64) (archive *model.Archive) {
 	return archive
 }
 
-func (w *Website) GetArchiveByUrlTokenFromCache(urlToken string) (archive *model.Archive) {
-	cacheKey := "archive-" + urlToken
-	err := w.Cache.Get(cacheKey, archive)
-	if err != nil {
-		archive, err = w.GetArchiveByUrlToken(urlToken)
-		if err != nil {
-			return nil
-		}
-		_ = w.Cache.Set(cacheKey, archive, 300)
-	}
-
-	return archive
-}
-
 func (w *Website) DeleteArchiveCache(id int64, urlToken string, link string) {
 	w.Cache.Delete("archive-" + strconv.FormatInt(id, 10))
 	w.Cache.Delete("archive-" + urlToken)
@@ -2044,9 +2030,8 @@ type QuickImportArchive struct {
 	images    []*response.TinyAttachment
 	nextImage int
 
-	current   time.Time
-	between   time.Duration
-	curDayNum int
+	current time.Time
+	between time.Duration
 }
 
 func (w *Website) NewQuickImportArchive(req *request.QuickImportArchiveRequest) (*QuickImportArchive, error) {

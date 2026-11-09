@@ -41,8 +41,8 @@ type Archive struct {
 
 	ForceSave  bool `json:"force_save"`  // 在标题冲突时，是否强制保存
 	ForceDraft bool `json:"force_draft"` // 强制保存为草稿（会员端「存草稿」按钮，优先于审核设置）
-	QuickSave bool `json:"quick_save"` // 是否是快速保存，快速保存模式下仅处理标题、关键词、描述、分类、图片、标签、标记、内容
-	UpdateAll bool `json:"update_all" ast:"-"`
+	QuickSave  bool `json:"quick_save"`  // 是否是快速保存，快速保存模式下仅处理标题、关键词、描述、分类、图片、标签、标记、内容
+	UpdateAll  bool `json:"update_all" ast:"-"`
 	// Partial 走 PATCH 语义：只覆盖显式传入的字段，未传的一律保持原值。
 	// 与 UpdateAll 互为反向开关，且优先——控制器用 req.UpdateAll = !req.Partial 归一。
 	Partial bool `json:"partial" ast:"-"`

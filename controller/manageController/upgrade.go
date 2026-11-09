@@ -316,9 +316,8 @@ type upgradeEntryFunc func(name string, mode os.FileMode, isDir bool, r io.Reade
 
 // upgradeCollector 统一处理条目：剥离公共前缀、过滤不覆盖的文件、写盘
 type upgradeCollector struct {
-	stats    *upgradeStats
-	prefix   string
-	rootDone bool
+	stats  *upgradeStats
+	prefix string
 }
 
 func upgradeFromZip(file string, fn upgradeEntryFunc) (*upgradeStats, error) {

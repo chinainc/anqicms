@@ -55,58 +55,6 @@ func recoverJSON(raw string) string {
 	return raw
 }
 
-// lenientInt parses a JSON value that could be a number, string number, or null.
-// Handles common LLM output issues like "50" or 50.0 for an int field.
-func lenientInt(v interface{}) (int, bool) {
-	if v == nil {
-		return 0, false
-	}
-	switch val := v.(type) {
-	case float64:
-		return int(val), true
-	case int:
-		return val, true
-	case string:
-		var n int
-		if _, err := fmt.Sscanf(val, "%d", &n); err == nil {
-			return n, true
-		}
-	}
-	return 0, false
-}
-
-// lenientString extracts a string from a JSON value.
-func lenientString(v interface{}) string {
-	if v == nil {
-		return ""
-	}
-	switch val := v.(type) {
-	case string:
-		return val
-	case float64:
-		return fmt.Sprintf("%v", val)
-	default:
-		b, _ := json.Marshal(val)
-		return strings.Trim(string(b), "\"")
-	}
-}
-
-// lenientBool extracts a bool from a JSON value.
-func lenientBool(v interface{}) bool {
-	if v == nil {
-		return false
-	}
-	switch val := v.(type) {
-	case bool:
-		return val
-	case string:
-		return val == "true" || val == "1"
-	case float64:
-		return val != 0
-	}
-	return false
-}
-
 // rawJSONUnmarshal does a two-pass parse: first as raw map to recover,
 // then into the target struct. Returns true if successful.
 func rawJSONUnmarshal(data []byte, target interface{}) error {
@@ -197,16 +145,6 @@ func safePathResolve(path, projectRoot string) (string, error) {
 	}
 
 	return p, nil
-}
-
-// ensureCachePath returns the cache directory path and ensures it exists.
-// All temporary/generated files (scripts, build output, etc.) should be written here.
-func ensureCachePath(projectRoot string) (string, error) {
-	cp := filepath.Join(projectRoot, "cache")
-	if err := os.MkdirAll(cp, 0755); err != nil {
-		return "", fmt.Errorf("创建缓存目录失败: %w", err)
-	}
-	return cp, nil
 }
 
 // ================================================================
@@ -390,7 +328,7 @@ func normalizeGlobPath(p string) string {
 //
 // 丢弃空段是必要的，不是洁癖：'**/catalog_*.go' 以 ** 开头，若保留首段空串，
 // ** 吃掉零层后会剩下「空段 + catalog_*.go」去匹配单段的 'catalog.go' 而失配
-//（这是第一版实现被测试抓到的真 bug）。标准 glob 语义里 'a//b' 等价于 'a/b'，
+// （这是第一版实现被测试抓到的真 bug）。标准 glob 语义里 'a//b' 等价于 'a/b'，
 // 所以丢弃是正确的。
 func splitGlobSegments(p string) []string {
 	parts := strings.Split(p, "/")
@@ -407,7 +345,7 @@ func splitGlobSegments(p string) []string {
 //
 // '**' 匹配 0..n 个路径段（标准 glob 语义），实现上枚举它可能吃掉多少段后递归。
 // 递归而非迭代：'a/**/b/**/c' 这类多个 '**' 只有递归才表达得了
-//（旧实现要求恰好一个 **，多个直接不进分支）。
+// （旧实现要求恰好一个 **，多个直接不进分支）。
 //
 // 末尾的 '**' 直接吞掉剩余全部段，因此 seg 是否还有元素都算匹配 —— 这正是
 // 'template/**' 能匹配 'template' 本身（零层）的原因。
@@ -1002,78 +940,6 @@ func findClosestMatch(content, search string) (int, string) {
 }
 
 // ================================================================
-//  Git-aware file walk (skip .git, node_modules, vendor)
-// ================================================================
-
-// shouldSkipDir checks if a directory should be skipped during walks.
-func shouldSkipDir(name string) bool {
-	return strings.HasPrefix(name, ".") || name == "vendor" || name == "node_modules"
-}
-
-// walkGoFiles walks the project directory and finds all .go files.
-func walkGoFiles(root string, maxFiles int) ([]string, error) {
-	var files []string
-	err := filepath.Walk(root, func(path string, fi os.FileInfo, err error) error {
-		if err != nil {
-			return nil // Skip inaccessible paths
-		}
-		if fi.IsDir() {
-			if shouldSkipDir(fi.Name()) && path != root {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if strings.HasSuffix(path, ".go") && !strings.HasSuffix(path, "_test.go") {
-			files = append(files, path)
-			if maxFiles > 0 && len(files) >= maxFiles {
-				return fmt.Errorf("max files reached")
-			}
-		}
-		return nil
-	})
-	return files, err
-}
-
-// walkAllFiles walks the project directory finding all non-binary files.
-func walkAllFiles(root string, maxFiles int) ([]string, error) {
-	var files []string
-	err := filepath.Walk(root, func(path string, fi os.FileInfo, err error) error {
-		if err != nil {
-			return nil
-		}
-		if fi.IsDir() {
-			if shouldSkipDir(fi.Name()) && path != root {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		files = append(files, path)
-		if maxFiles > 0 && len(files) >= maxFiles {
-			return fmt.Errorf("max files reached")
-		}
-		return nil
-	})
-	return files, err
-}
-
-// ================================================================
-//  Markdown formatting helpers
-// ================================================================
-
-// mdCodeBlock wraps content in a markdown code block with optional language.
-func mdCodeBlock(content, lang string) string {
-	if lang != "" {
-		return fmt.Sprintf("```%s\n%s\n```", lang, content)
-	}
-	return fmt.Sprintf("```\n%s\n```", content)
-}
-
-// mdBold wraps text in bold markdown.
-func mdBold(text string) string {
-	return fmt.Sprintf("**%s**", text)
-}
-
-// ================================================================
 //  Streamlined error response helpers (make tests happy)
 // ================================================================
 
@@ -1087,14 +953,4 @@ func friendlyPathError(err error) string {
 		return "错误：" + msg
 	}
 	return "错误：" + msg
-}
-
-// containsString checks if a string slice contains a value.
-func containsString(slice []string, val string) bool {
-	for _, s := range slice {
-		if s == val {
-			return true
-		}
-	}
-	return false
 }

@@ -25,7 +25,7 @@ type PointLog struct {
 	CreatedTime int64  `json:"created_time" gorm:"column:created_time;type:bigint(20);autoCreateTime;index:idx_created_time"`
 	UpdatedTime int64  `json:"updated_time" gorm:"column:updated_time;type:bigint(20);autoUpdateTime"`
 	UserId      uint   `json:"user_id" gorm:"column:user_id;type:int(10) unsigned not null;default:0;index:idx_point_user_id"`
-	Points      int64  `json:"points" gorm:"column:points;type:bigint(20) not null;default:0"`            // 正数增加，负数扣减
+	Points      int64  `json:"points" gorm:"column:points;type:bigint(20) not null;default:0"`             // 正数增加，负数扣减
 	AfterPoints int64  `json:"after_points" gorm:"column:after_points;type:bigint(20) not null;default:0"` // 变动后余额
 	Type        int    `json:"type" gorm:"column:type;type:tinyint(1) not null;default:1"`                 // 1签到 2消费 3管理调整 4兑换
 	Remark      string `json:"remark" gorm:"column:remark;type:varchar(250) not null;default:''"`
@@ -54,8 +54,8 @@ type Shop struct {
 	Notice       string `json:"notice" gorm:"column:notice;type:varchar(500) not null;default:''"`
 	Contact      string `json:"contact" gorm:"column:contact;type:varchar(100) not null;default:''"`
 	ThemeColor   string `json:"theme_color" gorm:"column:theme_color;type:varchar(20) not null;default:''"`
-	Decoration   string `json:"decoration" gorm:"column:decoration;type:text"` // 店铺装修 JSON
-	Status       int    `json:"status" gorm:"column:status;type:tinyint(1) not null;default:0"` // 0 待审核 1 正常 2 已关闭
+	Decoration   string `json:"decoration" gorm:"column:decoration;type:text"`                    // 店铺装修 JSON
+	Status       int    `json:"status" gorm:"column:status;type:tinyint(1) not null;default:0"`   // 0 待审核 1 正常 2 已关闭
 	Deposit      int64  `json:"deposit" gorm:"column:deposit;type:bigint(20) not null;default:0"` // 保证金余额（分）
 	DepositTotal int64  `json:"deposit_total" gorm:"column:deposit_total;type:bigint(20) not null;default:0"`
 	ProductCount int64  `json:"product_count" gorm:"column:product_count;type:bigint(20) not null;default:0"`
@@ -75,7 +75,7 @@ type ShopDepositLog struct {
 	UpdatedTime int64  `json:"updated_time" gorm:"column:updated_time;type:bigint(20);autoUpdateTime"`
 	ShopId      uint   `json:"shop_id" gorm:"column:shop_id;type:int(10) unsigned not null;default:0;index:idx_deposit_shop_id"`
 	UserId      uint   `json:"user_id" gorm:"column:user_id;type:int(10) unsigned not null;default:0;index:idx_deposit_user_id"`
-	Amount      int64  `json:"amount" gorm:"column:amount;type:bigint(20) not null;default:0"`            // 正数缴纳，负数退还/扣划
+	Amount      int64  `json:"amount" gorm:"column:amount;type:bigint(20) not null;default:0"`             // 正数缴纳，负数退还/扣划
 	AfterAmount int64  `json:"after_amount" gorm:"column:after_amount;type:bigint(20) not null;default:0"` // 变动后保证金
 	Type        int    `json:"type" gorm:"column:type;type:tinyint(1) not null;default:1"`                 // 1 缴纳 2 退还 3 扣划
 	Remark      string `json:"remark" gorm:"column:remark;type:varchar(250) not null;default:''"`

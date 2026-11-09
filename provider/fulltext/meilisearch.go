@@ -149,15 +149,6 @@ func (s *MeiliSearchService) Bulk(docs []TinyArchive) error {
 		log.Printf("Full HTTP response: %v\n", task)
 		return err
 	}
-	// for {
-	// 	time.Sleep(1 * time.Second)
-	// 	task2, _ := s.apiClient.GetTask(task.TaskUID)
-	// 	log.Printf("task status %v", task2.Status)
-	// 	fmt.Printf("meilisearch indexing failed %v", task2.Error)
-	// 	if task2.Status == "succeeded" {
-	// 		break
-	// 	}
-	// }
 
 	return nil
 }

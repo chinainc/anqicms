@@ -151,7 +151,6 @@ func GetSendMailResult(jobID string) (*SendMailResult, bool) {
 	return r.snapshotPtr(), true
 }
 
-
 func (w *Website) GetSubscribers(categoryId int64, keyword string, currentPage, pageSize int) ([]*model.Subscriber, int64) {
 	var subscribers []*model.Subscriber
 	offset := (currentPage - 1) * pageSize
@@ -385,15 +384,6 @@ func (w *Website) GetSubscriberCategories() []*model.SubscriberCategory {
 	var categories []*model.SubscriberCategory
 	w.DB.Model(&model.SubscriberCategory{}).Find(&categories)
 	return categories
-}
-
-func (w *Website) GetSubscriberCategory(id int64) (*model.SubscriberCategory, error) {
-	var category model.SubscriberCategory
-	err := w.DB.Model(&model.SubscriberCategory{}).Where("id = ?", id).First(&category).Error
-	if err != nil {
-		return nil, err
-	}
-	return &category, nil
 }
 
 func (w *Website) GetSubscriberCategoryByTitle(title string) (*model.SubscriberCategory, error) {

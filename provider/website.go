@@ -117,7 +117,6 @@ type Website struct {
 	Limiter          *Limiter
 	TplI18n          *i18n.I18n
 	// 一些缓存内容
-	languages    map[string]string
 	backLanguage string
 	ctx          iris.Context // 这个类型是指针，因此只能在拷贝后赋值
 	Template     *StoreTemplates
@@ -727,20 +726,6 @@ func detectLanguage(mainSite *Website, ctx iris.Context, host string, uri string
 // 主机匹配检查
 func isHostMatch(parsed *url.URL, host string) bool {
 	return parsed.Hostname() == host
-}
-
-// 子域名匹配检查
-func isSubdomainMatch(parsedHost, currentHost string) bool {
-	// 先移除 the first subdomain
-	topDomain := strings.SplitN(parsedHost, ".", 2)[1]
-	if strings.Count(topDomain, ".") == 1 {
-		topDomain = parsedHost
-	}
-	if strings.HasSuffix(currentHost, "."+topDomain) {
-		return true
-	}
-
-	return false
 }
 
 // 处理匹配到的网站

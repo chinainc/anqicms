@@ -8,13 +8,6 @@ import (
 	"syscall"
 )
 
-func RunCommand(exe string, args ...string) ([]byte, error) {
-	instance := exec.Command(exe, args...)
-	instance.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-
-	return instance.Output()
-}
-
 func RunCmd(prog string, args ...string) error {
 	var err error
 	cmd := exec.Command(prog, args...)

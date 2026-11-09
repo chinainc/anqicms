@@ -53,40 +53,6 @@ func NotFound(ctx iris.Context) {
 	}
 }
 
-func CommonPage(ctx iris.Context) {
-	webInfo := &response.WebInfo{}
-
-	currentSite := provider.CurrentSite(ctx)
-	ctx.ViewData("webInfo", webInfo)
-
-	tplName := "common/index.html"
-	urlToken := ctx.Params().GetString("filename")
-	if urlToken != "" {
-		urlToken = filepath.Clean(urlToken)
-		if !strings.HasSuffix(urlToken, ".html") {
-			urlToken += ".html"
-		}
-		tplName = "common/" + urlToken
-		tplName = filepath.Clean(tplName)
-		if !strings.HasPrefix(tplName, "common") {
-			ctx.StatusCode(iris.StatusNotFound)
-			return
-		}
-	}
-	var ok bool
-	tplName, ok = currentSite.TemplateExist(tplName, "common/index.html", "common/detail.html")
-	if !ok {
-		NotFound(ctx)
-		return
-	}
-
-	err := ctx.View(GetViewPath(ctx, tplName))
-	if err != nil {
-		ctx.StatusCode(404)
-		ShowMessage(ctx, "common/index.html Not Found", nil)
-	}
-}
-
 func ShowMessage(ctx iris.Context, message string, buttons []Button) {
 	currentSite := provider.CurrentSite(ctx)
 	var tr func(str string, args ...interface{}) string

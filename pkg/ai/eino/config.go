@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	einoOpenAI "github.com/cloudwego/eino-ext/components/model/openai"
-	"github.com/cloudwego/eino/schema"
 	"kandaoni.com/anqicms/config"
 )
 
@@ -251,109 +250,4 @@ func GetClient() (*einoOpenAI.ChatModel, error) {
 	}
 
 	return client, nil
-}
-
-// GenerateText uses Eino ChatModel to generate text completion.
-func GenerateText(ctx context.Context, prompt string, options ...GenerateOption) (string, error) {
-	client, err := GetClient()
-	if err != nil {
-		return "", err
-	}
-
-	cfg := applyOptions(options)
-
-	messages := []*schema.Message{
-		schema.UserMessage(prompt),
-	}
-
-	msg, err := client.Generate(ctx, messages)
-	if err != nil {
-		return "", err
-	}
-
-	result := msg.Content
-	if cfg.Stream {
-		// For streaming, we still do a full generate since we concatenate
-		// This path is kept for API compatibility
-	}
-
-	return result, nil
-}
-
-// GenerateStructured uses Eino ChatModel to generate structured JSON output.
-func GenerateStructured[T any](ctx context.Context, prompt string, systemPrompt string) (*T, error) {
-	client, err := GetClient()
-	if err != nil {
-		return nil, err
-	}
-
-	var messages []*schema.Message
-	if systemPrompt != "" {
-		messages = append(messages, schema.SystemMessage(systemPrompt))
-	}
-	messages = append(messages, schema.UserMessage(prompt))
-
-	msg, err := client.Generate(ctx, messages)
-	if err != nil {
-		return nil, err
-	}
-
-	var parsed T
-	if err := parseJSON(msg.Content, &parsed); err != nil {
-		return nil, err
-	}
-	return &parsed, nil
-}
-
-// compose graph node types for content management
-type GraphInput struct {
-	Action   string `json:"action"` // "create", "update", "suggest"
-	Title    string `json:"title"`
-	Content  string `json:"content"`
-	Category string `json:"category"`
-	Keywords string `json:"keywords"`
-	Language string `json:"language"`
-}
-
-type GraphOutput struct {
-	Success      bool     `json:"success"`
-	Message      string   `json:"message"`
-	Title        string   `json:"title"`
-	Content      string   `json:"content"`
-	Keywords     string   `json:"keywords"`
-	Description  string   `json:"description"`
-	Suggestions  []string `json:"suggestions"`
-	SEO          string   `json:"seo"`
-	ErrorMessage string   `json:"error_message,omitempty"`
-}
-
-// GenerateOption allows configuring GenerateText calls.
-type GenerateOption func(*generateConfig)
-
-type generateConfig struct {
-	Stream    bool
-	MaxTokens int
-}
-
-func applyOptions(opts []GenerateOption) *generateConfig {
-	cfg := &generateConfig{Stream: false}
-	for _, o := range opts {
-		o(cfg)
-	}
-	return cfg
-}
-
-func WithStream() GenerateOption {
-	return func(c *generateConfig) { c.Stream = true }
-}
-
-func WithMaxTokens(n int) GenerateOption {
-	return func(c *generateConfig) { c.MaxTokens = n }
-}
-
-func parseJSON(s string, v any) error {
-	if s == "" {
-		return nil
-	}
-	return nil
 }

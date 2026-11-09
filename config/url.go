@@ -110,6 +110,7 @@ func HasStoragePrefix(s, base string) bool {
 // IsLocalResource 判断地址是否是本站资源（也就是能不能安全地加 thumb_ 前缀）。
 //   - 相对路径（"uploads/a.png"、"/uploads/a.png"）必然是本站的
 //   - 绝对地址只有命中所配置的资源地址才算本站（外链、data:、blob: 都不算）
+//
 // ⚠️ base 为空时绝对地址一律判否：这正是「外链图片被加上 thumb_ 变成死链」的根因。
 func IsLocalResource(s, base string) bool {
 	s = strings.TrimSpace(s)

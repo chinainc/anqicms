@@ -1,7 +1,6 @@
 package provider
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -400,15 +399,6 @@ func (w *Website) InitModelData() {
 			w.UpgradeMultiCategory()
 		}()
 	}
-}
-
-func getTableEngine(db *gorm.DB, tableName string) (string, error) {
-	var tableStatus = make(map[string]interface{})
-	db.Raw(fmt.Sprintf("SHOW TABLE STATUS LIKE '%s'", tableName)).Scan(&tableStatus)
-	if engine, ok := tableStatus["Engine"].(string); ok {
-		return engine, nil
-	}
-	return "", errors.New("not found engine")
 }
 
 func getColumns(db *gorm.DB, dst interface{}) ([]string, error) {

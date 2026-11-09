@@ -57,9 +57,9 @@ func normalizeEndpointPath(path string) string {
 // DeclaredEndpointTarget 是一个被意图层声明为可达的后台端点。
 type DeclaredEndpointTarget struct {
 	Method string   `json:"method"`
-	Path   string   `json:"path"`  // 规范化后的完整后台路径
-	Via    []string `json:"via"`   // 声明来源："intent:<name>" 或 "cap:<name>"
-	Key    string   `json:"key"`   // "METHOD PATH"，便于与外部端点表比对
+	Path   string   `json:"path"` // 规范化后的完整后台路径
+	Via    []string `json:"via"`  // 声明来源："intent:<name>" 或 "cap:<name>"
+	Key    string   `json:"key"`  // "METHOD PATH"，便于与外部端点表比对
 }
 
 // DeclaredEndpointTargets 汇总意图层声明可达的全部后台端点。
@@ -138,15 +138,4 @@ func DeclaredTargetsList() []DeclaredEndpointTarget {
 		})
 	}
 	return out
-}
-
-// DeclaredTargetKeys 返回声明端点的 "METHOD PATH" 键集合（排序）。
-func DeclaredTargetKeys() []string {
-	m := DeclaredEndpointTargets()
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }

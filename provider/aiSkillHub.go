@@ -445,23 +445,6 @@ func truncateBody(body []byte) string {
 	return string(body)
 }
 
-// ── 批量安装 ──
-
-// BatchInstallSkillsFromSkillHub 批量安装技能
-// 成功安装的 slug 列表和失败的 slug→error 映射
-func BatchInstallSkillsFromSkillHub(ctx context.Context, slugs []string, force bool) (installed []string, failed map[string]string) {
-	failed = make(map[string]string)
-	for _, slug := range slugs {
-		_, err := InstallSkillFromSkillHub(ctx, slug, force)
-		if err != nil {
-			failed[slug] = err.Error()
-		} else {
-			installed = append(installed, slug)
-		}
-	}
-	return
-}
-
 // ── 格式化输出 (供 AI 工具调用返回) ──
 
 // FormatSkillHubSearchResults 格式化搜索结果为 AI 可读文本

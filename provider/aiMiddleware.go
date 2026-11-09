@@ -1012,10 +1012,3 @@ func (m *CircuitBreakerMiddleware) CheckRepeat(sessionID string, signature strin
 	}
 	return "proceed"
 }
-
-// ResetCircuitBreaker 清空指定会话的熔断状态 (新一轮 AI 响应开始时调用)。
-func (m *CircuitBreakerMiddleware) ResetCircuitBreaker(sessionID string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	delete(m.states, sessionID)
-}

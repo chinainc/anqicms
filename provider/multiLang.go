@@ -921,18 +921,6 @@ func (ms *MultiLangSyncStatus) SyncMultiLangSiteContent(req *request.PluginMulti
 	return nil
 }
 
-func (w *Website) GetTextLogs(toLanguage string) []*model.TranslateTextLog {
-	var textLogs []*model.TranslateTextLog
-	cacheKey := "translate-texts-" + toLanguage
-	err := w.Cache.Get(cacheKey, &textLogs)
-	if err != nil {
-		w.DB.Model(&model.TranslateTextLog{}).Select("to_language", "text", "translated").Where("to_language = ?", toLanguage).Order("id desc").Limit(10000).Find(&textLogs)
-		w.Cache.Set(cacheKey, textLogs, 600)
-	}
-
-	return textLogs
-}
-
 var uriLangLocks = sync.Map{}
 
 // GetOrSetMultiLangCache siteType = single 模式下，翻译缓存的页面内容

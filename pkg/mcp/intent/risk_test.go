@@ -157,7 +157,8 @@ func TestActionRisk_AuditAllIntents(t *testing.T) {
 	}
 }
 
-func TestActionGrantSuffix(t *testing.T) {	if got := ActionGrantSuffix(map[string]any{"action": "save"}); got != "save" {
+func TestActionGrantSuffix(t *testing.T) {
+	if got := ActionGrantSuffix(map[string]any{"action": "save"}); got != "save" {
 		t.Errorf("ActionGrantSuffix = %q", got)
 	}
 	if got := ActionGrantSuffix(map[string]any{"path": "a"}); got != "" {

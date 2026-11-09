@@ -177,16 +177,6 @@ func (w *Website) GetAdminInfoById(id uint) (*model.Admin, error) {
 	return &admin, nil
 }
 
-func (w *Website) GetAdminInfoByName(name string) (*model.Admin, error) {
-	var admin model.Admin
-	err := w.DB.Where("name = ?", name).First(&admin).Error
-	if err != nil {
-		return nil, err
-	}
-
-	return &admin, nil
-}
-
 func (w *Website) GetAdminAuthToken(userId uint, remember bool) string {
 	// 默认24小时
 	t := time.Now().Add(24 * time.Hour)
@@ -205,42 +195,6 @@ func (w *Website) GetAdminAuthToken(userId uint, remember bool) string {
 	}
 
 	return tokenString
-}
-
-func (w *Website) UpdateAdminInfo(adminId uint, req request.AdminInfoRequest) (*model.Admin, error) {
-	admin, err := w.GetAdminInfoById(adminId)
-	if err != nil {
-		return nil, err
-	}
-	//开始验证
-	req.UserName = strings.TrimSpace(req.UserName)
-	req.Password = strings.TrimSpace(req.Password)
-
-	var exists *model.Admin
-
-	if req.UserName != "" {
-		exists, err = w.GetAdminInfoByName(req.UserName)
-		if err == nil && exists.Id != admin.Id {
-			return nil, errors.New(w.Tr("UsernameIsAlreadyInUse"))
-		}
-		admin.UserName = req.UserName
-	}
-
-	if req.Password != "" {
-		if len(req.Password) < 6 {
-			return nil, errors.New(w.Tr("PleaseEnterAPasswordOf6CharactersOrMore"))
-		}
-		err = admin.EncryptPassword(req.Password)
-		if err != nil {
-			return nil, errors.New(w.Tr("PasswordSettingFailed"))
-		}
-	}
-	err = w.DB.Save(admin).Error
-	if err != nil {
-		return nil, errors.New(w.Tr("UserUpdateFailed"))
-	}
-
-	return admin, nil
 }
 
 func (w *Website) AddAdminLog(ctx iris.Context, logData string) {

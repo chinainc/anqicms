@@ -17,7 +17,6 @@ type TinyMailplan struct {
 	Identifier string
 	SendTime   int64
 	ErrorTimes int // 错误次数，最多重试3次
-	LastError  string
 }
 
 type MailService struct {

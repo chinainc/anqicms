@@ -35,8 +35,6 @@ type TitleImage struct {
 	PublicPath string
 	config     *config.PluginTitleImageConfig
 	useWebp    int
-	title      string
-	content    string
 	font       *truetype.Font
 	fontSize   int
 }

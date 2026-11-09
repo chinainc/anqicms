@@ -235,7 +235,7 @@ func (k *Kernel) buildTool(spec *IntentSpec, full bool) *mcp.Tool {
 // registerMeta 注册 meta 意图（不在 catalog 中）。
 //
 // 2026-10-07：mcp_set_scope 改为**默认不注册**，需显式开启
-//（见 Config.EnableSetScope）。原因是它的 scope 是**进程级全局**的——
+// （见 Config.EnableSetScope）。原因是它的 scope 是**进程级全局**的——
 // Reregister 摘除/重注册的是共享 mcp.Server 的全局工具表，一个客户端设窄会
 // 让**所有并发客户端**的 tools/list 一起变窄，且新会话恢复不了（须重启）。
 // ScopeStaleAfter 的空闲自动恢复只是缓解，不是修复。

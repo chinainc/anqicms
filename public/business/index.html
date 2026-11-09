@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>商家工作台 - My Alibaba</title>
+<link rel="icon" href="data:," />
+<link rel="stylesheet" href="assets/css/style.css?v=20261109d" />
+</head>
+<body>
+
+<!-- ============ 图标精灵 ============ -->
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.2 10.2 12 3.2l8.8 7"/><path d="M5.4 9.2V20.5h13.2V9.2"/><path d="M9.6 20.5v-5.2h4.8v5.2"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.6l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8L3.5 9.8l5.9-.9z"/></symbol>
+  <symbol id="i-shop" viewBox="0 0 24 24"><path d="M3.6 9.2h16.8"/><path d="M5.2 9.2 6.8 3.8h10.4l1.6 5.4"/><path d="M5.6 9.2v11.3h12.8V9.2"/><path d="M9.8 20.5v-5.4h4.4v5.4"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><circle cx="12" cy="12" r="4.4"/><circle cx="12" cy="12" r="1"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><rect x="3.4" y="5" width="17.2" height="14" rx="2.6"/><path d="M10.4 9.2l5 2.8-5 2.8z"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3.6 20.4h16.8"/><path d="M6.4 20.4v-6"/><path d="M12 20.4V6.6"/><path d="M17.6 20.4v-9.6"/></symbol>
+  <symbol id="i-mega" viewBox="0 0 24 24"><path d="M3.6 10.2v3.6l10.4 4.4V5.8L3.6 10.2z"/><path d="M14 8.2a3.9 3.9 0 010 7.6"/><path d="M6.4 14.6v3.6a1.6 1.6 0 003.2 0v-2.4"/></symbol>
+  <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3.8" y="9.4" width="16.4" height="11" rx="1.8"/><path d="M3.8 13.6h16.4"/><path d="M12 9.4v11"/><path d="M12 9.4S10.8 4.4 8.2 4.4a2.2 2.2 0 000 5"/><path d="M12 9.4s1.2-5 3.8-5a2.2 2.2 0 010 5"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5.4h16v10.4H9.6L4.6 20V5.4z"/><path d="M8.2 10.6h.01M12 10.6h.01M15.8 10.6h.01"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8.6" r="3.4"/><path d="M3.4 19.6c0-3.1 2.5-5.2 5.6-5.2s5.6 2.1 5.6 5.2"/><path d="M16.2 6.2a3.2 3.2 0 010 6.2"/><path d="M17.4 14.8c2 .5 3.4 2.2 3.4 4.8"/></symbol>
+  <symbol id="i-cart" viewBox="0 0 24 24"><path d="M3.4 4.6h2.4l2.4 10.2h9.6l2.2-7.4H7"/><circle cx="9.4" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></symbol>
+  <symbol id="i-truck" viewBox="0 0 24 24"><path d="M2.8 6.4h10.6v9.8H2.8z"/><path d="M13.4 10h4l2.8 3v3.2h-6.8"/><circle cx="6.6" cy="18.6" r="1.6"/><circle cx="17" cy="18.6" r="1.6"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M12 3.2l8 4v9.6l-8 4-8-4V7.2z"/><path d="M4 7.2l8 4 8-4"/><path d="M12 11.2v9.6"/></symbol>
+  <symbol id="i-goods" viewBox="0 0 24 24"><rect x="3.4" y="4" width="10" height="9.6" rx="1.8"/><rect x="10.4" y="10.4" width="10.2" height="9.6" rx="1.8"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><rect x="3" y="6.4" width="18" height="12.4" rx="2.4"/><path d="M3 10.4h18"/><circle cx="16.6" cy="15" r="1.2"/></symbol>
+  <symbol id="i-badge" viewBox="0 0 24 24"><circle cx="12" cy="9.6" r="5.6"/><path d="M8.4 14.4 7 21l5-2.2L17 21l-1.4-6.6"/><path d="M9.8 9.4l1.6 1.7 3-3.4"/></symbol>
+  <symbol id="i-growth" viewBox="0 0 24 24"><path d="M3.6 17.4l5-5.4 3.4 3 3-3.4 4.6 4.6"/><path d="M15.4 8.6h5v5"/></symbol>
+  <symbol id="i-robot" viewBox="0 0 24 24"><rect x="4.2" y="7.6" width="15.6" height="11.4" rx="3"/><path d="M12 3.4v4.2"/><circle cx="9" cy="13" r="1.1"/><circle cx="15" cy="13" r="1.1"/><path d="M4.2 12.4H2.4v3h1.8M19.8 12.4h1.8v3h-1.8"/></symbol>
+  <symbol id="i-headset" viewBox="0 0 24 24"><path d="M4.2 14.4v-2.2a7.8 7.8 0 0115.6 0v2.2"/><rect x="2.6" y="13.6" width="3.6" height="6" rx="1.8"/><rect x="17.8" y="13.6" width="3.6" height="6" rx="1.8"/><path d="M19.6 19.6c0 1.4-1.8 2.4-4.2 2.4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.6" cy="10.6" r="6.4"/><path d="M15.4 15.4 20.6 20.6"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M17.8 16.4H6.2l1.4-2.2V9.6a4.4 4.4 0 018.8 0v4.6z"/><path d="M10.2 19.2a2 2 0 004 0"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.2"/><path d="M3.8 12h16.4"/><path d="M12 3.8c2.2 2.4 3.3 5.2 3.3 8.2S14.2 17.8 12 20.2c-2.2-2.4-3.3-5.2-3.3-8.2S9.8 6.2 12 3.8z"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M9.6 9.4a2.5 2.5 0 114.2 2c-.9.7-1.8 1.2-1.8 2.6"/><path d="M12 17.2h.01"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M9 5.6 15.4 12 9 18.4"/></symbol>
+</svg>
+
+<!-- ============ 顶部栏（一级菜单） ============ -->
+<header class="topbar">
+  <a class="brand" href="#">
+    <span class="brand__mark">A</span>
+    <span class="brand__logo">阿里巴巴国际站</span>
+  </a>
+
+  <ul class="nav" id="nav" aria-label="主导航"><!-- JS 渲染 --></ul>
+
+  <div class="topbar__tools">
+    <div class="topsearch" role="search">
+      <svg class="ico"><use href="#i-search"/></svg>
+      <span class="topsearch__ph">搜索功能菜单、平台规则</span>
+    </div>
+    <button class="tool" type="button" title="消息"><svg class="ico"><use href="#i-bell"/></svg><i class="dot"></i></button>
+    <button class="tool" type="button" title="语言"><svg class="ico"><use href="#i-globe"/></svg></button>
+    <span class="avatar">16</span>
+    <button class="tool tool--blue" type="button" title="在线客服"><svg class="ico"><use href="#i-chat"/></svg></button>
+    <button class="tool" type="button" title="帮助"><svg class="ico"><use href="#i-help"/></svg></button>
+  </div>
+</header>
+
+<div class="shell">
+  <!-- ============ 二级导航 ============ -->
+  <aside class="subnav" id="subnav" hidden>
+    <p class="subnav__title" id="subnavTitle"></p>
+    <ul class="subnav__list" id="subnavList"><!-- JS 渲染 --></ul>
+  </aside>
+
+  <div class="workspace">
+  <div class="dashboard" id="dashboard">
+
+  <!-- ============ 主区 ============ -->
+  <main class="main">
+    <!-- 同步提示 -->
+    <section class="card notice">
+      <div class="notice__body">
+        <p class="notice__title">
+          <span class="notice__ico"><svg class="ico"><use href="#i-chart"/></svg></span>
+          店铺数据更新中，结果将自动同步
+        </p>
+        <p class="notice__desc">
+          店铺诊断结果将在更新后自动同步展示，无需您额外操作。如有任何疑问，欢迎随时在线联系专属客服小何，同时支持实时扫码诊断店铺，助您快速定位运营优化项。<a href="#">查看诊断详情</a>
+        </p>
+      </div>
+      <div class="notice__side">
+        <span>全托管</span>
+        <a href="#">管理 <svg class="caret"><use href="#i-arrow"/></svg></a>
+      </div>
+    </section>
+
+    <!-- 三张优化卡 -->
+    <section class="optrow">
+      <article class="card opt">
+        <header class="opt__head">
+          <h3>商品竞争力</h3><span class="tag tag--warn">需优化</span>
+        </header>
+        <p class="opt__desc">商品标题待优化，优化后商品点击率预计提升20%~30%，请及时跟进整改。</p>
+        <a class="opt__link" href="#">已为您发现10个商品待优化 <svg class="caret"><use href="#i-arrow"/></svg></a>
+      </article>
+
+      <article class="card opt">
+        <header class="opt__head">
+          <h3>市场热卖品不足</h3><span class="tag tag--warn">需优化</span>
+        </header>
+        <p class="opt__desc">搜索推荐词下为您发现买家常搜商品，您当前热卖品类不足，进一步补充可提升曝光。</p>
+        <a class="opt__link" href="#">发现1个市场的热卖品 (0/1) <svg class="caret"><use href="#i-arrow"/></svg></a>
+      </article>
+
+      <article class="card opt">
+        <header class="opt__head">
+          <h3>金牌认证未完善</h3><span class="tag tag--warn">需完善</span>
+        </header>
+        <p class="opt__desc">完善金牌认证，能够获得买家更好信任，询盘转化平均提升12%。</p>
+        <a class="opt__link" href="#">完成金牌实名认证 <svg class="caret"><use href="#i-arrow"/></svg></a>
+      </article>
+    </section>
+
+    <!-- 数据卡 -->
+    <section class="card kpi">
+      <header class="kpi__head">
+        <div class="tabs" role="tablist">
+          <button class="tabs__item is-active" role="tab" data-tab="realtime">实时数据</button>
+          <button class="tabs__item" role="tab" data-tab="shop">店铺数据</button>
+          <button class="tabs__item" role="tab" data-tab="market">营销数据</button>
+        </div>
+        <div class="kpi__meta">
+          <span>更新时间：2026-11-03 18:00 (PST)</span>
+          <a href="#">更多数据 <svg class="caret"><use href="#i-arrow"/></svg></a>
+        </div>
+      </header>
+      <div class="metrics" id="metrics"><!-- JS 渲染 --></div>
+    </section>
+
+    <!-- 经营管理 -->
+    <section class="card biz">
+      <header class="biz__head"><h3>经营管理</h3></header>
+      <div class="counters">
+        <a class="counter" href="#"><span class="counter__label">询盘</span><b>0</b><span class="counter__desc">询盘消息总量</span></a>
+        <a class="counter" href="#"><span class="counter__label">RFQ 报价</span><b>44</b><span class="counter__desc">个报价中 RFQ</span></a>
+        <a class="counter" href="#"><span class="counter__label">订单</span><b>0</b><span class="counter__desc">个待处理订单</span></a>
+        <a class="counter" href="#"><span class="counter__label">半托管</span><b>0</b><span class="counter__desc">个商品报名</span></a>
+        <a class="counter" href="#"><span class="counter__label">活动</span><b>0</b><span class="counter__desc">场活动待报名</span></a>
+      </div>
+
+      <div class="rfq__head">
+        <span>以下询盘为您推荐的优质询盘</span>
+        <a href="#">更多 <svg class="caret"><use href="#i-arrow"/></svg></a>
+      </div>
+
+      <ul class="rfq" id="rfq"><!-- JS 渲染 --></ul>
+    </section>
+  </main>
+
+  <!-- ============ 右侧栏 ============ -->
+  <aside class="rail">
+    <!-- 店铺 -->
+    <section class="card corp">
+      <div class="corp__top">
+        <span class="corp__logo">B</span>
+        <div class="corp__id">
+          <h3>Dongguan Bafinasa Garments Co., Ltd.</h3>
+          <p class="corp__verified">2yrs verified</p>
+        </div>
+      </div>
+      <div class="corp__stars"><span class="stars">★★★★★</span><b>5.0</b></div>
+      <div class="corp__tags">
+        <span class="chip">主营一类：服装及配件</span>
+        <span class="chip chip--blue">实力工厂</span>
+      </div>
+      <div class="corp__row"><span>我的权益</span><a href="#">全部权益 <svg class="caret"><use href="#i-arrow"/></svg></a></div>
+      <div class="corp__row"><span class="corp__ok">已认证</span><a href="#">去设置</a></div>
+      <div class="corp__row corp__row--muted"><span>RFQ：</span><span>本月已报 0 个</span></div>
+    </section>
+
+    <!-- AI 卡 -->
+    <section class="card ai">
+      <h3 class="ai__brand">Accio Work</h3>
+      <p class="ai__title">懂电商的专业 AI 工作台</p>
+      <p class="ai__desc">选品测品、智能拓盘、商品优化、买家洞察，一键直达 <a href="#">查看详情</a></p>
+      <div class="ai__bottom">
+        <span class="ai__faces"><i></i><i></i><i></i></span>
+        <button class="ai__btn" type="button">去看看有多强</button>
+      </div>
+      <span class="ai__blob ai__blob--a"></span>
+      <span class="ai__blob ai__blob--b"></span>
+    </section>
+
+    <!-- 待办 -->
+    <section class="card todo">
+      <header class="card__head"><h3>我的待办</h3><a href="#">更多</a></header>
+      <div class="todo__grid" id="todo"><!-- JS 渲染 --></div>
+    </section>
+
+    <!-- 公告 -->
+    <section class="card noticebox">
+      <header class="card__head"><h3>公告</h3><a href="#">更多</a></header>
+      <div class="noticebox__empty">
+        <span class="noticebox__ico"><svg class="ico"><use href="#i-bell"/></svg></span>
+        <p>暂无未读消息</p>
+      </div>
+    </section>
+
+    <!-- 底部推广 -->
+    <section class="promo">
+      <div class="promo__text">
+        <p class="promo__t1">新版生意助手来了！</p>
+        <p class="promo__t2">能力升级　全面增长</p>
+        <button class="promo__btn" type="button">立即体验</button>
+      </div>
+      <span class="promo__glow"></span>
+    </section>
+  </aside>
+  </div>
+
+  <!-- ============ 二级页面 ============ -->
+  <section class="pageview" id="pageview" hidden>
+    <div class="pv-head">
+      <div class="pv-head__main">
+        <p class="pageview__crumb" id="pageCrumb"></p>
+        <h2 class="pageview__title" id="pageTitle"></h2>
+      </div>
+      <div class="pv-head__acts" id="pageActs"><!-- JS 渲染 --></div>
+    </div>
+    <div class="pageview__body" id="pageBody"><!-- JS 渲染 --></div>
+  </section>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="assets/js/app.js?v=20261109d"></script>
+</body>
+</html>

@@ -43,6 +43,13 @@ func Register(app *iris.Application) {
 	app.Get("/forget", controller.ForgetPasswordPage)
 	// 店铺主页（页头登录态交给模板的公共部分，避免额外中间件开销）
 	app.Get("/shop/{id:string}", controller.ShopPage)
+	// 商家工作台：页面与资源都在 public/business/ 下，资源走 FileServe，这里只兜目录地址。
+	// ⚠️ iris 注册路由时会把结尾的 "/" 吞掉（"/business/" 等同 "/business"），而项目
+	// 又用 iris.WithoutPathCorrection 关掉了路径修正，所以 "/business/" 这类带尾斜杠的
+	// 请求不会命中静态路由，会落到 "/{path:path}" 兜底里变成 404。
+	// 因此这里显式用 {p:path} 兜住子路径：p 为空时就是 "/business/"，由处理器出 index.html；
+	// p 非空时（如 /business/assets/x.css）由处理器转给 FileServe。
+	app.HandleMany(iris.MethodGet, "/business /{base:string}/business /business/{p:path} /{base:string}/business/{p:path}", controller.BusinessPage)
 	// 会员中心
 	app.Get("/member", middleware.ParseUserToken, controller.MemberPage)
 	app.Get("/member/{route:path}", middleware.ParseUserToken, controller.MemberPage)

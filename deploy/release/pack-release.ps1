@@ -23,7 +23,7 @@
 #
 # 用法：
 #   powershell -NoProfile -ExecutionPolicy Bypass -File deploy\release\pack-release.ps1
-#     -Version 3.6.8       指定版本（不传则用下面的 $ver）
+#     -Version 3.6.9       指定版本（不传则用下面的 $ver）
 #     -Mirror https://...  写进在线安装脚本的镜像地址
 #     -NoArm64             跳过 linux/arm64
 #     -OutDir D:\publish   换输出目录（默认 E:\CodeBuddy\anqicms发布）
@@ -50,7 +50,7 @@ if (-not $ver) {
     if ($m) { $ver = $m.Matches[0].Groups[1].Value }
   }
 }
-if (-not $ver) { $ver = '3.6.8' }
+if (-not $ver) { $ver = '3.6.9' }
 if (-not (Test-Path $out)) { New-Item -ItemType Directory -Path $out -Force | Out-Null }
 
 $stage  = Join-Path $env:TEMP ('anqicms-pack-' + $ver)
@@ -113,6 +113,11 @@ function Copy-AppFiles {
   # public 只带静态资源与 xsl；线上生成的 sitemap-*.xml 与用户上传的 uploads 不要
   New-Item -ItemType Directory -Path (Join-Path $Dir 'public\static') -Force | Out-Null
   Copy-Item -Recurse (Join-Path $root 'public\static\default') (Join-Path $Dir 'public\static')
+  # 商家工作台（/business）：程序自带的静态页面，controller/business.go 从 public/business 读盘，
+  # 不带就会 404。注意后台升级逻辑会跳过整个 public/，所以它只随完整安装包分发。
+  if (Test-Path (Join-Path $root 'public\business')) {
+    Copy-Item -Recurse (Join-Path $root 'public\business') (Join-Path $Dir 'public')
+  }
   Copy-Item (Join-Path $root 'public\*.xsl') (Join-Path $Dir 'public') -ErrorAction SilentlyContinue
   New-Item -ItemType Directory -Path (Join-Path $Dir 'public\uploads') -Force | Out-Null
   foreach ($f in @('dictionary.txt', 'License', 'README.md', 'CHANGELOG.md', 'config.sample.json')) {
@@ -163,9 +168,8 @@ if (-not $NoArm64) { New-LinuxTree -Dir $linArm -Arch 'arm64' -BinDir $stageArm 
 
 # ---------------------------------------------------------------- upgrade packages
 Write-Host '== upgrade packages =='
-$note = ('3.6.8：新增前台会员中心（首页/资料/密码/消息/收藏/评论/积分/财务/充值/提现/订单/发布与已发布/评价/销售/邀请/实名认证/接口令牌/购物车/店铺）' +
-         '与店铺展示、装修配置；新增全站搜索框（居中收窄，含移动端）；新增后台「可视化装修」（区块拖拽排序 + 实时预览 + 前台渲染）；' +
-         '后台新增「上传升级包」与「用户实名认证审核」；新增 anqicms-cli 命令行工具。')
+$note = ('3.6.9：新增商家工作台（/business，程序自带静态页面，页面与资源随完整安装包分发）；' +
+         '清理未使用的历史函数与死代码约 2400 行（翻译/推送/标签 SQL/旧 AI 技能等已停用实现），统一结构体 tag 与代码缩进。')
 
 $sqlList = @()
 $vjBase = [ordered]@{

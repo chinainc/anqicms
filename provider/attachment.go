@@ -216,10 +216,8 @@ func (w *Website) AttachmentUpload(file multipart.File, info *multipart.FileHead
 						if w.PluginStorage.StorageType != config.StorageTypeLocal {
 							posterFile, err := os.Open(tmpPosterPath)
 							if err == nil {
-								defer func() {
-									_ = posterFile.Close()
-								}()
 								_, err = w.UploadFile(posterPath, posterFile)
+								_ = posterFile.Close()
 								if err != nil {
 									fmt.Printf("Failed to upload poster: %v\n", err)
 									// 继续执行，不影响视频上传

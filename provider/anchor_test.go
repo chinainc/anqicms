@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"kandaoni.com/anqicms/config"
 	"kandaoni.com/anqicms/library"
 	"kandaoni.com/anqicms/model"
 	"log"
@@ -9,6 +10,9 @@ import (
 
 func TestReplaceContentText(t *testing.T) {
 	dbSite, _ := GetDBWebsiteInfo(1)
+	if dbSite == nil {
+		dbSite = &model.Website{Id: 1}
+	}
 	InitWebsite(dbSite)
 	w := GetWebsite(1)
 	// InitWebsite 只填站点结构，不建 Cache。缺了它，本测试留给全局的
@@ -20,6 +24,9 @@ func TestReplaceContentText(t *testing.T) {
 	// 全局站点跨测试共享，谁把它设成半初始化，谁就得负责补全。
 	if w.Cache == nil {
 		w.Cache = library.InitMemoryCache()
+	}
+	if w.PluginAnchor == nil {
+		w.PluginAnchor = &config.PluginAnchorConfig{}
 	}
 	w.PluginAnchor.NoStrongTag = 0
 	w.PluginAnchor.AnchorDensity = 100

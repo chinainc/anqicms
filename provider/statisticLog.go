@@ -120,8 +120,8 @@ func (s *StatisticLog) Read(fileName string, searchType string, offset, limit in
 	if s.initial == false {
 		return nil, 0
 	}
-	defer s.rwMu.Unlock()
-	s.rwMu.Lock()
+	s.rwMu.RLock()
+	defer s.rwMu.RUnlock()
 
 	if fileName == "" {
 		fileName = time.Now().Format("20060102")

@@ -23,6 +23,7 @@ var domainByNS = map[string]Domain{
 	"collector":  DomainContentOps,
 	"aigenerate": DomainContentOps,
 	"design":     DomainDesign,
+	"diy":        DomainDesign,
 	"admin":      DomainAccount,
 	"password":   DomainAccount,
 	"login":      DomainAccount,
@@ -41,6 +42,7 @@ var domainByPlugin = map[string]Domain{
 	"replace":   DomainSiteOps,
 	// 交易
 	"user":       DomainCommerce,
+	"userauth":   DomainAccount,
 	"order":      DomainCommerce,
 	"pay":        DomainCommerce,
 	"retailer":   DomainCommerce,

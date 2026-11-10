@@ -288,6 +288,7 @@ func (w *Website) UploadDesignZip(file io.ReaderAt, info *multipart.FileHeader, 
 	var designInfo response.DesignPackage
 	if err == nil {
 		data, err := io.ReadAll(tmpFile)
+		_ = tmpFile.Close()
 		if err == nil {
 			err = json.Unmarshal(data, &designInfo)
 			if err == nil {
@@ -310,6 +311,7 @@ func (w *Website) UploadDesignZip(file io.ReaderAt, info *multipart.FileHeader, 
 				_, err = os.Stat(packagePath)
 				if err != nil {
 					packageName = packageName + strconv.Itoa(i)
+					break
 				}
 				i++
 			}
@@ -1220,10 +1222,12 @@ func (w *Website) RestoreDesignData(packageName string) error {
 	settings, err := zipReader.Open("settings")
 	if err == nil {
 		w2.restoreSingleData("settings", settings)
+		_ = settings.Close()
 	}
 	modules, err := zipReader.Open("modules")
 	if err == nil {
 		w2.restoreSingleData("modules", modules)
+		_ = modules.Close()
 	}
 	// 需要先处理 settings 和 modules，再开始处理其他表
 	for _, f := range zipReader.File {

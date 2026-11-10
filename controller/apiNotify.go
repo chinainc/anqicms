@@ -3,7 +3,6 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -200,11 +199,10 @@ func NotifyAlipay(ctx iris.Context) {
 		ctx.WriteString("fail")
 		return
 	}
-	file, err := os.Open(currentSite.DataPath + "cert/" + account.PayConfig.PublicCertPath)
+	fileContent, err := os.ReadFile(currentSite.DataPath + "cert/" + account.PayConfig.PublicCertPath)
 	if err != nil {
 		return
 	}
-	fileContent, err := io.ReadAll(file)
 
 	ok, err := alipay.VerifySign(string(fileContent), bm)
 	if ok == false || err != nil {

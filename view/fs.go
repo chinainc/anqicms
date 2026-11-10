@@ -66,6 +66,7 @@ func getFS(fsOrDir interface{}) fs.FS {
 func getRootDirName(fileSystem fs.FS) string {
 	rootDirFile, err := fileSystem.Open(".")
 	if err == nil {
+		defer rootDirFile.Close()
 		rootDirStat, err := rootDirFile.Stat()
 		if err == nil {
 			return rootDirStat.Name()

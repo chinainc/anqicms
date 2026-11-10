@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -386,8 +387,15 @@ func TestBashTool_CapsOutputWithinBudget(t *testing.T) {
 	}
 	budget := svc.resultBudget()
 
+	cmd := `for i in $(seq 1 4000); do echo \"line $i padding padding padding\"; done`
+	prefix := "$ for i in"
+	if runtime.GOOS == "windows" {
+		cmd = `for /L %i in (1,1,4000) do @echo line %i padding padding padding`
+		prefix = "$ for /L %i in"
+	}
+
 	out, err := handler(context.Background(),
-		`{"command":"for i in $(seq 1 4000); do echo \"line $i padding padding padding\"; done","timeout":30}`)
+		fmt.Sprintf(`{"command":%q,"timeout":30}`, cmd))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -400,7 +408,7 @@ func TestBashTool_CapsOutputWithinBudget(t *testing.T) {
 	if !strings.Contains(out, "输出共") {
 		t.Errorf("应说明原始输出规模: %q", tailOf(out))
 	}
-	if !strings.HasPrefix(out, "$ for i in") {
+	if !strings.HasPrefix(out, prefix) {
 		t.Errorf("命令回显应留在开头: %q", out[:40])
 	}
 }
@@ -412,8 +420,12 @@ func TestBashTool_KeepsExitCodeWhenOutputFloods(t *testing.T) {
 	if !ok {
 		t.Skip("bash 工具未注册")
 	}
+	cmd := `for i in $(seq 1 4000); do echo \"noise $i noise noise noise\"; done; echo boom >&2; exit 3`
+	if runtime.GOOS == "windows" {
+		cmd = `for /L %i in (1,1,4000) do @echo noise %i noise noise noise & echo boom 1>&2 & exit /b 3`
+	}
 	out, err := handler(context.Background(),
-		`{"command":"for i in $(seq 1 4000); do echo \"noise $i noise noise noise\"; done; echo boom >&2; exit 3","timeout":30}`)
+		fmt.Sprintf(`{"command":%q,"timeout":30}`, cmd))
 	if err != nil {
 		t.Fatal(err)
 	}

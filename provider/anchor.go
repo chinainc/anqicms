@@ -13,6 +13,7 @@ import (
 	"unicode/utf8"
 
 	"golang.org/x/net/html"
+	"kandaoni.com/anqicms/config"
 	"kandaoni.com/anqicms/library"
 	"kandaoni.com/anqicms/model"
 	"kandaoni.com/anqicms/request"
@@ -340,7 +341,9 @@ func (w *Website) compileAnchors(anchors []*model.Anchor) {
 }
 
 func (w *Website) ReplaceContentText(anchors []*model.Anchor, content string, link string) (string, bool) {
-	link = strings.TrimPrefix(link, w.System.BaseUrl)
+	if w.System != nil && w.System.BaseUrl != "" {
+		link = strings.TrimPrefix(link, w.System.BaseUrl)
+	}
 	if len(anchors) == 0 {
 		anchors, _ = w.GetAllAnchors()
 		if len(anchors) == 0 {
@@ -357,7 +360,11 @@ func (w *Website) ReplaceContentText(anchors []*model.Anchor, content string, li
 	// 获取纯文本字数
 	stripedContent := library.StripTags(content)
 	contentLen := len([]rune(stripedContent))
-	if w.PluginAnchor.AnchorDensity < 20 {
+	if w.PluginAnchor == nil {
+		w.PluginAnchor = &config.PluginAnchorConfig{
+			AnchorDensity: 200,
+		}
+	} else if w.PluginAnchor.AnchorDensity < 20 {
 		// 默认设置200
 		w.PluginAnchor.AnchorDensity = 200
 	}

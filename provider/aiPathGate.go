@@ -101,6 +101,7 @@ var gateSystemProtectedPrefixes = []string{
 	"/bin", "/sbin", "/lib",
 	"/sys", "/proc", "/dev", "/boot",
 	"/var", "/private/var",
+	"/Windows", "/WINDOWS", "/Program Files", "/Program Files (x86)",
 }
 
 // gateSystemProtectedExceptions 命中这些前缀的不算系统保护
@@ -201,13 +202,17 @@ func IsSystemProtectedPath(abs string) bool {
 		return false
 	}
 	slashed := filepath.ToSlash(abs)
+	checkPath := slashed
+	if len(checkPath) >= 2 && checkPath[1] == ':' {
+		checkPath = checkPath[2:]
+	}
 	for _, e := range gateSystemProtectedExceptions {
-		if slashed == e || strings.HasPrefix(slashed, e+"/") {
+		if checkPath == e || strings.HasPrefix(checkPath, e+"/") {
 			return false
 		}
 	}
 	for _, p := range gateSystemProtectedPrefixes {
-		if slashed == p || strings.HasPrefix(slashed, p+"/") {
+		if checkPath == p || strings.HasPrefix(checkPath, p+"/") {
 			return true
 		}
 	}
@@ -220,8 +225,29 @@ func isUnderRoot(p, root string) bool {
 	if p == "" || root == "" {
 		return false
 	}
-	cleanRoot := filepath.Clean(root)
-	return p == cleanRoot || strings.HasPrefix(p, cleanRoot+string(filepath.Separator))
+	cleanP := filepath.ToSlash(filepath.Clean(p))
+	cleanRoot := filepath.ToSlash(filepath.Clean(root))
+	if cleanP == cleanRoot || strings.HasPrefix(cleanP, strings.TrimSuffix(cleanRoot, "/")+"/") {
+		return true
+	}
+	if strings.HasPrefix(cleanRoot, "/") && len(cleanP) >= 2 && cleanP[1] == ':' {
+		pWithoutVol := cleanP[2:]
+		if pWithoutVol == cleanRoot || strings.HasPrefix(pWithoutVol, strings.TrimSuffix(cleanRoot, "/")+"/") {
+			return true
+		}
+	}
+	return false
+}
+
+// isSlashAbs 判断路径是否为跨平台的绝对路径（Unix 斜杠开头或 Windows 带盘符/绝对路径）
+func isSlashAbs(p string) bool {
+	if strings.HasPrefix(p, "/") || filepath.IsAbs(p) {
+		return true
+	}
+	if len(p) >= 2 && p[1] == ':' {
+		return true
+	}
+	return false
 }
 
 // ResolveToolPath 把工具参数里的原始路径解析为绝对路径，并解除符号链接。
@@ -247,7 +273,7 @@ func ResolveToolPath(rawPath, root string) (string, bool) {
 		} else {
 			base = filepath.Join(home, strings.TrimPrefix(p, "~/"))
 		}
-	case filepath.IsAbs(p):
+	case isSlashAbs(p):
 		base = p
 	default:
 		if root == "" {

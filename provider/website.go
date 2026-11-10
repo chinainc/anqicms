@@ -370,6 +370,9 @@ func InitWebsites() {
 }
 
 func InitWebsite(mw *model.Website) {
+	if mw == nil {
+		return
+	}
 	var db *gorm.DB
 	var err error
 	if mw.Id == 1 {
@@ -391,7 +394,9 @@ func InitWebsite(mw *model.Website) {
 	}
 	if mw.Id > 0 && mw.TokenSecret == "" {
 		mw.TokenSecret = config.GenerateRandString(32)
-		GetDefaultDB().Save(mw)
+		if defaultDB != nil {
+			GetDefaultDB().Save(mw)
+		}
 	}
 	lang, exists := os.LookupEnv("LANG")
 	if !exists {

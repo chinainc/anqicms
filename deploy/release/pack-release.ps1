@@ -50,7 +50,7 @@ if (-not $ver) {
     if ($m) { $ver = $m.Matches[0].Groups[1].Value }
   }
 }
-if (-not $ver) { $ver = '3.6.9' }
+if (-not $ver) { $ver = '3.6.10' }
 if (-not (Test-Path $out)) { New-Item -ItemType Directory -Path $out -Force | Out-Null }
 
 $stage  = Join-Path $env:TEMP ('anqicms-pack-' + $ver)
@@ -168,7 +168,8 @@ if (-not $NoArm64) { New-LinuxTree -Dir $linArm -Arch 'arm64' -BinDir $stageArm 
 
 # ---------------------------------------------------------------- upgrade packages
 Write-Host '== upgrade packages =='
-$note = ('3.6.9：新增商家工作台（/business，程序自带静态页面，页面与资源随完整安装包分发）；' +
+$note = ('3.6.10：AI 工具路径门闸 Windows 适配（系统目录保护、盘符归一）；修复多处资源句柄未关闭与统计日志读取锁语义（改读锁）；' +
+         '修复模板包重名目录、锚文本替换空指针、站点初始化空指针容错；MCP 意图层域映射补全。3.6.9：新增商家工作台（/business，程序自带静态页面，页面与资源随完整安装包分发）；' +
          '清理未使用的历史函数与死代码约 2400 行（翻译/推送/标签 SQL/旧 AI 技能等已停用实现），统一结构体 tag 与代码缩进。')
 
 $sqlList = @()

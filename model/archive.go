@@ -34,16 +34,47 @@ type Archive struct {
 	FixedLink     string         `json:"fixed_link" gorm:"column:fixed_link;type:varchar(190) default null;index"`        // 固化的链接
 	UserId        uint           `json:"user_id" gorm:"column:user_id;type:int(10) unsigned not null;default:0;index"`
 	Price         int64          `json:"price" gorm:"column:price;type:bigint(20) not null;default:0"`
-	Stock         int64          `json:"stock" gorm:"column:stock;type:bigint(20) not null;default:9999999"`
-	ReadLevel     int            `json:"read_level" gorm:"column:read_level;type:int(10) not null;default:0"`             // 阅读关联 group level
-	Password      string         `json:"password" gorm:"column:password;type:varchar(32) not null;default:''"`            // 明文密码，需要使用密码查看文档的时候填写
-	Sort          uint           `json:"sort" gorm:"column:sort;type:int(10) unsigned not null;default:0;index:idx_sort"` // 数值越大，越靠前
+	// OriginPrice / CostPrice 存在 archive_products（见 model.ArchiveProduct）
+	OriginPrice int64 `json:"origin_price" gorm:"-"`
+	CostPrice   int64 `json:"cost_price" gorm:"-"`
+	// Stock 留在主表：它有一整套原子表达式写（下单扣减、退单回补、SKU 汇总重算），
+	// 拆表就没法用一条 UPDATE 完成，见 model.ArchiveProduct 顶部说明。
+	Stock     int64  `json:"stock" gorm:"column:stock;type:bigint(20) not null;default:9999999"`
+	ReadLevel int    `json:"read_level" gorm:"column:read_level;type:int(10) not null;default:0"`             // 阅读关联 group level
+	Password  string `json:"password" gorm:"column:password;type:varchar(32) not null;default:''"`            // 明文密码，需要使用密码查看文档的时候填写
+	Sort      uint   `json:"sort" gorm:"column:sort;type:int(10) unsigned not null;default:0;index:idx_sort"` // 数值越大，越靠前
 	//采集专用
 	HasPseudo   int    `json:"has_pseudo" gorm:"column:has_pseudo;type:tinyint(1) not null;default:0"`
 	KeywordId   uint   `json:"keyword_id" gorm:"column:keyword_id;type:bigint(20) not null;default:0"`
 	OriginUrl   string `json:"origin_url" gorm:"column:origin_url;type:varchar(190) not null;default:'';index:idx_origin_url"`
 	OriginTitle string `json:"origin_title" gorm:"column:origin_title;type:varchar(190) not null;default:'';index:idx_origin_title"`
 	OriginId    int    `json:"origin_id" gorm:"column:origin_id;type:tinyint(1) unsigned not null;default:0"` // 来源 0， 1 采集，2 AI生成
+	// 商城专用字段：全部存在 archive_products（见 model.ArchiveProduct）。
+	// 这里保留字段名与 json tag 只为维持前端/模板契约；读由 provider 注册的
+	// GORM 查询回调填充，写由 Archive.AfterSave 落到侧表。
+	// gorm:"-" 是刻意的：archives 表不再有这些列（旧列将在 3.8.0 DROP）。
+	Brand          string       `json:"brand" gorm:"-"`
+	VideoUrl       string       `json:"video_url" gorm:"-"`        // 视频主图
+	NeedLogistics  bool         `json:"need_logistics" gorm:"-"`   // 需要物流
+	IsFreeShipping bool         `json:"is_free_shipping" gorm:"-"` // 免运费
+	SoldCount      int64        `json:"sold_count" gorm:"-"`       // 销量
+	ReviewCount    int64        `json:"review_count" gorm:"-"`     // 评价数量
+	AverageScore   float32      `json:"average_score" gorm:"-"`    // 平均评分
+	OptionType     int          `json:"option_type" gorm:"-"`      // sku模式，0 无SKU，1 组合SKU，2 加价SKU
+	Weight         float64      `json:"weight" gorm:"-"`           // 如果填写了长宽高，并且设置了体积重系数，则自动计算重量
+	WeightUnit     string       `json:"weight_unit" gorm:"-"`      // 如果填写了长宽高，并且设置了体积重系数，则自动使用重量单位kg
+	Length         float64      `json:"length" gorm:"-"`
+	Width          float64      `json:"width" gorm:"-"`
+	Height         float64      `json:"height" gorm:"-"`
+	Volume         float64      `json:"volume" gorm:"-"` // 固定是 m³，自动换算
+	LengthUnit     string       `json:"length_unit" gorm:"-"`
+	AllowOversold  bool         `json:"allow_oversold" gorm:"-"`          // 允许超售
+	OrderFields    moduleFields `json:"order_fields,omitempty" gorm:"-"`  // 订单字段
+	MinQuantity    int          `json:"min_quantity,omitempty" gorm:"-"`  // 最小购买数量
+	MaxQuantity    int          `json:"max_quantity,omitempty" gorm:"-"`  // 最大购买数量
+	StepQuantity   int          `json:"step_quantity,omitempty" gorm:"-"` // 购买数量步长
+	ProductType    int          `json:"product_type" gorm:"-"`            // 产品类型，1 普通商品，2 wholesale，3 custom, 4 vertual， 5 service， 6 subscription
+
 	// 其他内容
 	Category       *Category    `json:"category" gorm:"-"`
 	ModuleName     string       `json:"module_name" gorm:"-"`
@@ -63,8 +94,24 @@ type Archive struct {
 	Relations      []*Archive   `json:"relations" gorm:"-"`
 	Content        string       `json:"content" gorm:"-"`     // 列表获取Content的时候，使用这个字段
 	IsFavorite     bool         `json:"is_favorite" gorm:"-"` // 是否收藏了
+	Quantity       int          `json:"quantity,omitempty" gorm:"-"`
+	CartId         int64        `json:"cart_id,omitempty" gorm:"-"`
+	Amount         int64        `json:"amount,omitempty" gorm:"-"`
+	OriginAmount   int64        `json:"origin_amount,omitempty" gorm:"-"`
+	// sku
+	Options        []*ArchiveOption    `json:"options,omitempty" gorm:"-"`
+	Skus           []*ArchiveSku       `json:"skus,omitempty" gorm:"-"`
+	Sku            *ArchiveSku         `json:"sku,omitempty" gorm:"-"`             // 单个，选择的一个sku，比如收藏夹，购物车，愿望清单等读取时用到
+	WholesaleRules []*WholesaleRule    `json:"wholesale_rules,omitempty" gorm:"-"` // 批发规则
+	WholesaleRule  *WholesaleRule      `json:"wholesale_rule,omitempty" gorm:"-"`  // 适用批发规则
+	OrderExtra     ExtraData           `json:"order_extra,omitempty" gorm:"-"`
+	SkuValues      ArchiveOptionValues `json:"sku_values,omitempty" gorm:"-"`
 
 	Extra map[string]config.CustomField `json:"extra" gorm:"-"`
+
+	// productLoaded 标记商品属性已经加载过（侧表批量回调或 AfterFind 单条）。
+	// 非导出字段：不参与 JSON、不被 GORM 扫描，只在一次查询的生命周期内有效。
+	productLoaded bool `json:"-" gorm:"-"`
 }
 
 type ArchiveData struct {

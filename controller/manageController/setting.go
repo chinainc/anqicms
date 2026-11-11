@@ -127,6 +127,7 @@ func SettingSystemForm(ctx iris.Context) {
 	currentSite.System.SiteClose = req.SiteClose
 	currentSite.System.SiteCloseTips = req.SiteCloseTips
 	currentSite.System.BanSpider = req.BanSpider
+	currentSite.System.ShopMode = req.ShopMode
 	if currentSite.System.BaseUrl != req.BaseUrl {
 		// 如果本来storageUrl = baseUrl
 		if currentSite.PluginStorage.StorageUrl == currentSite.System.BaseUrl {
@@ -390,6 +391,7 @@ func SettingContact(ctx iris.Context) {
 	// 复制一份再补全地址，避免污染共享配置
 	contact := *currentSite.Contact
 	contact.Qrcode = config.JoinStorageUrl(currentSite.PluginStorage.StorageUrl, contact.Qrcode)
+	contact.ShopLogo = config.JoinStorageUrl(currentSite.PluginStorage.StorageUrl, contact.ShopLogo)
 
 	ctx.JSON(iris.Map{
 		"code": config.StatusOK,
@@ -439,6 +441,7 @@ func SettingContactForm(ctx iris.Context) {
 	}
 
 	req.Qrcode = config.StripStorageUrl(req.Qrcode, currentSite.PluginStorage.StorageUrl)
+	req.ShopLogo = config.StripStorageUrl(req.ShopLogo, currentSite.PluginStorage.StorageUrl)
 
 	if req.ExtraFields != nil {
 		for i := range req.ExtraFields {
@@ -462,6 +465,12 @@ func SettingContactForm(ctx iris.Context) {
 	currentSite.Contact.Instagram = req.Instagram
 	currentSite.Contact.Youtube = req.Youtube
 	currentSite.Contact.ExtraFields = req.ExtraFields
+	currentSite.Contact.ShopName = req.ShopName
+	currentSite.Contact.ShopLogo = req.ShopLogo
+	currentSite.Contact.ShopDescription = req.ShopDescription
+	currentSite.Contact.BusinessHours = req.BusinessHours
+	currentSite.Contact.ShippingTime = req.ShippingTime
+	currentSite.Contact.ShippingTimeRemark = req.ShippingTimeRemark
 
 	err = currentSite.SaveSettingValue(provider.ContactSettingKey, currentSite.Contact)
 	if err != nil {
@@ -531,12 +540,12 @@ func SettingCacheForm(ctx iris.Context) {
 		currentSite.DeleteCache()
 
 		currentSite.AddAdminLog(ctx, ctx.Tr("UpdateCacheManually"))
-
-		ctx.JSON(iris.Map{
-			"code": config.StatusOK,
-			"msg":  ctx.Tr("CacheUpdated"),
-		})
 	}
+
+	ctx.JSON(iris.Map{
+		"code": config.StatusOK,
+		"msg":  ctx.Tr("CacheUpdated"),
+	})
 }
 
 // SettingSafe 获取安全设置，包括验证码、内容/频率限制、封禁规则及 API 开关。
@@ -741,11 +750,7 @@ func SettingBanner(ctx iris.Context) {
 func DeleteSettingBanner(ctx iris.Context) {
 	currentSite := provider.CurrentSubSite(ctx)
 	var req config.BannerItemDeleteRequest
-	if err := ctx.ReadJSON(&req); err != nil {
-		ctx.JSON(iris.Map{
-			"code": config.StatusFailed,
-			"msg":  err.Error(),
-		})
+	if !readJSONPayload(ctx, &req) {
 		return
 	}
 
@@ -756,6 +761,8 @@ func DeleteSettingBanner(ctx iris.Context) {
 		})
 		return
 	}
+	// 该 id 不在任何分组里时，不能回"配置已更新"。
+	found := false
 	for i := range currentSite.Banner.Banners {
 		if req.Type == "" {
 			req.Type = currentSite.Banner.Banners[i].Type
@@ -763,6 +770,7 @@ func DeleteSettingBanner(ctx iris.Context) {
 		if req.Type == currentSite.Banner.Banners[i].Type {
 			for j := range currentSite.Banner.Banners[i].List {
 				if currentSite.Banner.Banners[i].List[j].Id == req.Id {
+					found = true
 					currentSite.Banner.Banners[i].List = append(currentSite.Banner.Banners[i].List[:j], currentSite.Banner.Banners[i].List[j+1:]...)
 					if len(currentSite.Banner.Banners[i].List) == 0 && req.Type != "default" {
 						currentSite.Banner.Banners = append(currentSite.Banner.Banners[:i], currentSite.Banner.Banners[i+1:]...)
@@ -772,6 +780,10 @@ func DeleteSettingBanner(ctx iris.Context) {
 			}
 			break
 		}
+	}
+
+	if !requireFound(ctx, found) {
+		return
 	}
 
 	err := currentSite.SaveSettingValue(provider.BannerSettingKey, currentSite.Banner)
@@ -956,11 +968,7 @@ func SettingAiForm(ctx iris.Context) {
 		Chat  []*eino.Config           `json:"chat"`
 		Mcp   *eino.McpConfig          `json:"mcp"`
 	}
-	if err := ctx.ReadJSON(&req); err != nil {
-		ctx.JSON(iris.Map{
-			"code": config.StatusFailed,
-			"msg":  err.Error(),
-		})
+	if !readJSONPayload(ctx, &req) {
 		return
 	}
 
@@ -1014,5 +1022,45 @@ func SettingAiForm(ctx iris.Context) {
 			"chat":  chatSettings.Configs,
 			"mcp":   chatSettings.Mcp,
 		},
+	})
+}
+
+// SettingCurrency 获取商城币种与货币符号设置（无参数）。
+func SettingCurrency(ctx iris.Context) {
+	currentSite := provider.CurrentSubSite(ctx)
+
+	ctx.JSON(iris.Map{
+		"code": config.StatusOK,
+		"msg":  "",
+		"data": currentSite.Currency,
+	})
+}
+
+// SettingCurrencyForm 保存商城币种与货币符号设置（整体覆盖）。
+func SettingCurrencyForm(ctx iris.Context) {
+	currentSite := provider.CurrentSubSite(ctx)
+	var req config.CurrencyConfig
+	if !readJSONPayload(ctx, &req) {
+		return
+	}
+
+	currentSite.Currency.Name = req.Name
+	currentSite.Currency.Currency = req.Currency
+	currentSite.Currency.Symbol = req.Symbol
+
+	err := currentSite.SaveSettingValue(provider.CurrencySettingKey, currentSite.Currency)
+	if err != nil {
+		ctx.JSON(iris.Map{
+			"code": config.StatusFailed,
+			"msg":  err.Error(),
+		})
+		return
+	}
+
+	currentSite.AddAdminLog(ctx, ctx.Tr("UpdateSystemConfiguration"))
+
+	ctx.JSON(iris.Map{
+		"code": config.StatusOK,
+		"msg":  ctx.Tr("ConfigurationUpdated"),
 	})
 }

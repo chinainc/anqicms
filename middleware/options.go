@@ -22,7 +22,7 @@ func Cors(ctx iris.Context) {
 	ctx.Header("Access-Control-Allow-Credentials", "true")
 	ctx.Header("Access-Control-Expose-Headers", "Content-Disposition,Update-Token")
 	ctx.Header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,PATCH,OPTIONS")
-	ctx.Header("Access-Control-Allow-Headers", "Content-Type, Api, Accept, Authorization, Version, Admin, Token, Key, Site-Id, Sub-Site-Id, X-Site-Id, X-Pjax, X-Pjax-Container")
+	ctx.Header("Access-Control-Allow-Headers", "Content-Type, Api, Accept, Authorization, Version, Admin, Token, Key, Cart, Site-Id, Sub-Site-Id, X-Site-Id, X-Pjax, X-Pjax-Container")
 	// 预检结果缓存 10 分钟，减少多站点下每个跨域请求都先打一次 OPTIONS
 	ctx.Header("Access-Control-Max-Age", "600")
 	if ctx.Request().Method == "OPTIONS" {

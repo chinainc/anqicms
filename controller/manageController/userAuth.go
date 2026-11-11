@@ -10,6 +10,11 @@ import (
 // 界面是独立页 /system/user-auth.html（后台 SPA 是编译产物，无法直接加路由）。
 
 // PluginUserAuthList 认证列表（支持状态、关键词筛选）
+// 参数说明：
+//   - 查询参数 "page": 当前页码，默认 1。
+//   - 查询参数 "pageSize": 每页条数，默认 20。
+//   - 查询参数 "keyword": 按姓名/手机号等关键词筛选，可空。
+//   - 查询参数 "status": all（默认，全部）/ 0 待审核 / 1 已通过 / -1 已驳回。
 func PluginUserAuthList(ctx iris.Context) {
 	currentSite := provider.CurrentSite(ctx)
 	page := ctx.URLParamIntDefault("page", 1)
@@ -40,6 +45,8 @@ func PluginUserAuthList(ctx iris.Context) {
 }
 
 // PluginUserAuthDetail 认证详情
+// 参数说明：
+//   - 查询参数 "id": 认证记录 ID，必填。
 func PluginUserAuthDetail(ctx iris.Context) {
 	currentSite := provider.CurrentSite(ctx)
 	id := uint(ctx.URLParamIntDefault("id", 0))
@@ -59,7 +66,9 @@ func PluginUserAuthAudit(ctx iris.Context) {
 		Status int    `json:"status"`
 		Remark string `json:"remark"`
 	}
-	if err := ctx.ReadJSON(&req); err != nil {
+	// JSON 解析失败时回退读表单值（独立页面以表单提交）；req 不会是零值落库
+	err := ctx.ReadJSON(&req)
+	if err != nil {
 		req.Id = uint(ctx.PostValueIntDefault("id", 0))
 		req.Status = ctx.PostValueIntDefault("status", 0)
 		req.Remark = ctx.PostValueTrim("remark")

@@ -12,6 +12,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"gorm.io/gorm"
 	"kandaoni.com/anqicms/config"
+	"kandaoni.com/anqicms/library"
 	"kandaoni.com/anqicms/model"
 	"kandaoni.com/anqicms/pkg/mcp/server"
 	"kandaoni.com/anqicms/request"
@@ -681,7 +682,7 @@ func memberContentSchema(w *Website, withId bool) map[string]any {
 func memberBuildSaveRequest(w *Website, userId uint, id int64, args map[string]any, partial bool) *request.Archive {
 	req := &request.Archive{
 		Id:     id,
-		UserId: userId,
+		UserId: library.Ptr(userId),
 	}
 	req.Partial = partial
 	req.UpdateAll = !partial
@@ -709,12 +710,12 @@ func memberBuildSaveRequest(w *Website, userId uint, id int64, args map[string]a
 	}
 	if v, ok := args["description"]; ok {
 		if s, ok2 := v.(string); ok2 {
-			req.Description = s
+			req.Description = library.Ptr(s)
 		}
 	}
 	if v, ok := args["keywords"]; ok {
 		if s, ok2 := v.(string); ok2 {
-			req.Keywords = s
+			req.Keywords = library.Ptr(s)
 		}
 	}
 	if v, ok := args["url_token"]; ok {
@@ -723,16 +724,16 @@ func memberBuildSaveRequest(w *Website, userId uint, id int64, args map[string]a
 		}
 	}
 	if _, ok := args["images"]; ok {
-		req.Images = strSliceArg(args, "images")
+		req.Images = library.Ptr(strSliceArg(args, "images"))
 	}
 	if _, ok := args["tags"]; ok {
-		req.Tags = strSliceArg(args, "tags")
+		req.Tags = library.Ptr(strSliceArg(args, "tags"))
 	}
 	if _, ok := args["price"]; ok {
-		req.Price = int64Arg(args, "price")
+		req.Price = library.Ptr(int64Arg(args, "price"))
 	}
 	if _, ok := args["stock"]; ok {
-		req.Stock = int64Arg(args, "stock")
+		req.Stock = library.Ptr(int64Arg(args, "stock"))
 	}
 
 	// 是否进审核：站点未开放直接发布 → 草稿；用户组免审 → 直接发布

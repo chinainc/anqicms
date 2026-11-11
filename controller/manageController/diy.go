@@ -24,6 +24,8 @@ func PluginDiyTypes(ctx iris.Context) {
 }
 
 // PluginDiyPage 读取某个页面的装修配置
+// 参数说明：
+//   - 查询参数 "key": 页面标识（如 home），缺省为 home。
 func PluginDiyPage(ctx iris.Context) {
 	currentSite := provider.CurrentSite(ctx)
 	key := ctx.URLParamDefault("key", "home")
@@ -93,7 +95,9 @@ func PluginDiyReset(ctx iris.Context) {
 	var req struct {
 		Key string `json:"key"`
 	}
-	if err := ctx.ReadJSON(&req); err != nil {
+	// JSON 解析失败时回退读表单值（独立页面以表单提交）；req 不会是零值落库
+	err := ctx.ReadJSON(&req)
+	if err != nil {
 		req.Key = ctx.PostValueTrim("key")
 	}
 	if req.Key == "" {

@@ -111,11 +111,11 @@ func (w *Website) GenerateCombination(keyword *model.Keyword) (int, error) {
 		Title:      title,
 		ModuleId:   0,
 		CategoryId: categoryId,
-		Keywords:   keyword.Title,
+		Keywords:   library.Ptr(keyword.Title),
 		Content:    strings.Join(content, "\n"),
-		KeywordId:  keyword.Id,
+		KeywordId:  library.Ptr(keyword.Id),
 		OriginUrl:  keyword.Title,
-		OriginId:   config.ArchiveFromCollect,
+		OriginId:   library.Ptr(config.ArchiveFromCollect),
 	}
 	isDraft := false
 	if w.CollectorConfig.SaveType == 0 {
@@ -234,9 +234,9 @@ func (w *Website) GetCombinationArticle(keyword *model.Keyword) (*request.Archiv
 	archive := request.Archive{
 		Title:     title,
 		ModuleId:  0,
-		Keywords:  keyword.Title,
+		Keywords:  library.Ptr(keyword.Title),
 		Content:   strings.Join(content, "\n"),
-		KeywordId: keyword.Id,
+		KeywordId: library.Ptr(keyword.Id),
 		OriginUrl: keyword.Title,
 	}
 

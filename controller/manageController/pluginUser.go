@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 	"kandaoni.com/anqicms/config"
 	"kandaoni.com/anqicms/library"
+	"kandaoni.com/anqicms/model"
 	"kandaoni.com/anqicms/provider"
 	"kandaoni.com/anqicms/request"
 )
@@ -115,11 +116,10 @@ func PluginUserFieldsSettingForm(ctx iris.Context) {
 func PluginUserFieldsDelete(ctx iris.Context) {
 	currentSite := provider.CurrentSite(ctx)
 	var req request.ModuleFieldRequest
-	if err := ctx.ReadJSON(&req); err != nil {
-		ctx.JSON(iris.Map{
-			"code": config.StatusFailed,
-			"msg":  err.Error(),
-		})
+	if !readJSONPayload(ctx, &req) {
+		return
+	}
+	if !requireNonEmpty(ctx, req.FieldName, "field_name") {
 		return
 	}
 
@@ -241,6 +241,19 @@ func PluginUserDetail(ctx iris.Context) {
 	})
 }
 
+// userSaveData 构造保存用户成功后的回执数据。
+//
+// 只回 id + user_name：调用方（后台表单、AI 的 commerce user_create）最需要知道的是
+// 「刚刚写进去的是哪一条」，拿到 id 才能接着 user_update；把整个 model.User 回吐会把
+// email/phone/google_id 这些与本次写入无关的字段一起带出去，没必要。
+// 独立成函数是为了让这条契约能被单测锁住（见 pluginUser_save_data_test.go）。
+func userSaveData(user *model.User) iris.Map {
+	return iris.Map{
+		"id":        user.Id,
+		"user_name": user.UserName,
+	}
+}
+
 // PluginUserDetailForm 保存（新增或更新）用户信息。
 //
 // 参数说明：
@@ -281,7 +294,7 @@ func PluginUserDetailForm(ctx iris.Context) {
 	ctx.JSON(iris.Map{
 		"code": config.StatusOK,
 		"msg":  ctx.Tr("SaveSuccessfully"),
-		"data": user,
+		"data": userSaveData(user),
 	})
 }
 
@@ -414,12 +427,14 @@ func PluginUserGroupDetail(ctx iris.Context) {
 func PluginUserGroupDetailForm(ctx iris.Context) {
 	currentSite := provider.CurrentSite(ctx)
 	var req request.UserGroupRequest
-	if err := ctx.ReadJSON(&req); err != nil {
-		ctx.JSON(iris.Map{
-			"code": config.StatusFailed,
-			"msg":  err.Error(),
-		})
+	if !readJSONPayload(ctx, &req) {
 		return
+	}
+
+	// 与 PluginUserDetailForm 同一口径：表单提交是全量覆盖（UpdateAll），
+	// AI/程序化调用传 partial=true 才是 PATCH。
+	if !req.Partial {
+		req.UpdateAll = true
 	}
 
 	group, err := currentSite.SaveUserGroupInfo(&req)

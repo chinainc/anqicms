@@ -3,8 +3,10 @@ package model
 // 会员商城相关模型：购物车、积分、签到、店铺、保证金
 // 建表方式与项目其它模型一致：GORM AutoMigrate（provider/dao.go 的 models 清单）
 
-// Cart 购物车条目，同一用户同一内容只保留一行，数量累加
-type Cart struct {
+// CommerceCart 会员商城购物车条目，同一用户同一内容只保留一行，数量累加。
+// 注意：上游 3.8.0 引入了自己的 model.Cart（支持 SKU/token，表名 cart），
+// 本地商城购物车使用独立模型与表名，避免冲突。
+type CommerceCart struct {
 	Id          uint  `json:"id" gorm:"column:id;type:int(10) unsigned not null AUTO_INCREMENT;primaryKey"`
 	CreatedTime int64 `json:"created_time" gorm:"column:created_time;type:bigint(20);autoCreateTime;index:idx_created_time"`
 	UpdatedTime int64 `json:"updated_time" gorm:"column:updated_time;type:bigint(20);autoUpdateTime;index:idx_updated_time"`
@@ -17,6 +19,11 @@ type Cart struct {
 	Amount  int64    `json:"amount" gorm:"-"`
 	Thumb   string   `json:"thumb" gorm:"-"`
 	Link    string   `json:"link" gorm:"-"`
+}
+
+// TableName 独立表名，避免与上游 model.Cart 的 cart 表混用
+func (CommerceCart) TableName() string {
+	return "commerce_cart"
 }
 
 // PointLog 积分流水

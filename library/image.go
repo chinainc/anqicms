@@ -4,12 +4,13 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
-	"github.com/disintegration/imaging"
 	"image"
 	"image/color"
 	"image/draw"
 	"io"
 	"strings"
+
+	"github.com/disintegration/imaging"
 )
 
 func ThumbnailCrop(minWidth, minHeight int, img image.Image, thumbCrop int) image.Image {

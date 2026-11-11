@@ -75,31 +75,37 @@ import (
 //
 //	grep -c "req.UpdateAll" provider/<资源>.go     # 0 → 属 ②，收进本表
 //	grep -n "req\.[A-Z][A-Za-z]* = req\." provider/<资源>.go   # 属 ②
+//
+// 2026-10-29 起**没有登记项**：最后两个 ②（material / place）也已指针化 +
+// 加 UpdateAll/Partial 开关，迁到了下面的 partialInvokePaths。
+// 机制保留——将来新增「逐字段无条件赋值」的保存端点仍然要登记进来，
+// 删掉这张表会让那个端点静默清零（不报错），而不是编译失败。
 var invokeRouteOverwriteFields = map[string][]string{
 	// key 必须是 normalizeEndpointPath 之后的形态（带 /system/api 前缀），
 	// 因为查表用的就是规范化后的路径——写成裸路径会永远查不到。
 	//
-	// 素材：provider/material.go:66-70 是逐字段无条件赋值（material.Title = req.Title…），
-	// 没有 UpdateAll 但效果等价。实测（2026-10-03）素材 id=2「请输入验证码以便正常访问」
-	// 只传 id+title 改名后 content 被清空（正文丢失），故保护 content。
+	// 素材：原 provider/material.go 逐字段无条件赋值、且 `material.Status = 1`
+	// 硬编码（status 根本读不到 req 的值，补齐传 0 也会被覆盖成 1）。
+	// 2026-10-29 已指针化并加开关，本表项移除。
 	//
-	// ⚠️ **status 不在保护列表**：material.go:68 写的是 `material.Status = 1` ——
-	// 硬编码常量、根本不读 req.Status，即端点语义就是「保存即启用」。
-	// 补齐传 0 也会被它覆盖成 1，登记了只是白登记（实测确认）。
-	normalizeEndpointPath("/plugin/material/detail"): {"content", "category_id", "auto_update"},
-	// 会员分组：commerce group_save。分级信息（level/price）被清零会让权限与定价失效。
-	normalizeEndpointPath("/plugin/user/group/detail"): {"description", "level", "price", "favorable_price"},
-	// 城市站：provider/place.go:93-105 逐字段无条件赋值。
-	// 实测（2026-10-03，新建临时记录 id=1 后只传 id+title 改名）：
-	// seo_title / keywords / description / template / logo / images / status / latitude
-	// **8 个字段全被清空**（status 从 1 变 0 即站点被停用），波及面比会员那次更广。
-	// 城市站是站点结构，模板/logo/坐标被清会直接影响前台渲染。
-	normalizeEndpointPath("/plugin/place/detail"): {
-		"seo_title", "keywords", "url_token", "description", "content",
-		"parent_id", "sort", "template", "is_inherit", "images", "logo",
-		"latitude", "longitude", "timezone", "status",
-	},
+	// 城市站：原 provider/place.go 逐字段无条件赋值，实测只传 id+title 改名后
+	// seo_title / keywords / description / template / logo / images / status /
+	// latitude 8 个字段全被清空，且 url_token 被空标题重新生成（旧链接 404）。
+	// 2026-10-29 已指针化并加开关，本表项移除。
 }
+
+// preserveGetParam 登记「GET 兄弟的 id 参数名与 POST 不同」的端点。
+//
+// preserveOnInvokeRoute 默认用 id 去查同路径的 GET 兄弟，但端点的取名并不统一：
+// 优惠券详情读的是 coupon_id（manageController.CouponDetail），POST 写的是 id
+// （request.CouponRequest）。不改这里的话，回查永远返回 0 条，上面那张保护表
+// 就成了摆设——是静默失效，不是报错，所以必须显式登记。
+//
+// 目前**没有登记项**：唯一需要它的 /plugin/coupon/detail 已于 2026-10-29
+// 改走 partialInvokePaths（端点自己就是 PATCH），不再回查补齐。
+// 机制保留：将来若有全量覆盖端点用非 id 的名字读详情，仍然需要它
+// （删掉这张表会让那种情况静默失效，而不是报错）。
+var preserveGetParam = map[string]string{}
 
 // partialInvokePaths 登记「走 PATCH 语义、不需要补齐」的 POST 端点。
 //
@@ -121,6 +127,28 @@ var partialInvokePaths = map[string]bool{
 	// 修复前它在 invokeRouteOverwriteFields 里（补齐兜底），
 	// 加 partial 后已从那张表移除——两套机制叠加是多余的，且补齐有风险。
 	normalizeEndpointPath("/plugin/user/detail"): true,
+	// 会员分组：2026-10-29 起 SaveUserGroupInfo 改为「先读库再按指针合并」，
+	// request.UserGroupRequest 也有 UpdateAll/Partial，端点自己能只覆盖传入字段。
+	normalizeEndpointPath("/plugin/user/group/detail"): true,
+	// 优惠券：2026-10-29 起 request.CouponRequest 指针化并加了 UpdateAll/Partial，
+	// provider.SaveCoupon 用 library.Assign 统一「非 nil 才写」。
+	// 之前它在 invokeRouteOverwriteFields 里靠 GET 回查补齐，但补齐是**兜底**：
+	// 回查失败（券被删、读接口变更）就退回全量覆盖，面额被清成 0 而回执照旧 ok。
+	// 现在端点自己就能只覆盖传入字段，补齐既多余又有用派生值覆盖真值的风险。
+	normalizeEndpointPath("/plugin/coupon/detail"): true,
+	// 营销活动：同上。SaveActivity 的 skus 用 nil/[]/*[] 三态区分
+	// 「不动 / 清空全部 / 按列表同步」，不传规格即不动，不会再删光。
+	normalizeEndpointPath("/plugin/activity/detail"): true,
+	// 素材：2026-10-29 起 request.PluginMaterial 指针化 + UpdateAll/Partial，
+	// provider.SaveMaterial 用 library.Assign。「改标题把正文清空」不再发生；
+	// 同时 Status 不再硬编码为 1（素材终于可以禁用），md5 改为取当前内容。
+	normalizeEndpointPath("/plugin/material/detail"): true,
+	// 素材分类：同上（原本 `category.Status = 1` 硬编码，分类永远无法停用）。
+	normalizeEndpointPath("/plugin/material/category/detail"): true,
+	// 城市站：2026-10-29 起 request.PlaceRequest 指针化 + UpdateAll/Partial。
+	// url_token 改成三态（nil=不动 / 空串=按标题重生成 / 非空=用它），
+	// 不再出现「改个状态把 URL 改掉、旧链接 404」。
+	normalizeEndpointPath("/plugin/place/detail"): true,
 }
 
 // preserveOnInvokeRoute 在调用全量覆盖的 POST 端点前，把未传的受保护字段用旧值补齐。
@@ -162,10 +190,15 @@ func preserveOnInvokeRoute(ctx context.Context, cap CapInvoker, action string,
 	if getTarget == "" {
 		return
 	}
+	// GET 兄弟的参数名不一定叫 id（优惠券详情读的是 coupon_id，见 preserveGetParam）
+	idKey := "id"
+	if alt, ok := preserveGetParam[path]; ok && alt != "" {
+		idKey = alt
+	}
 	out, err := cap(ctx, "api_invoke", map[string]any{
 		"method": "GET",
 		"path":   path,
-		"params": map[string]any{"id": params["id"]},
+		"params": map[string]any{idKey: params["id"]},
 	})
 	if err != nil {
 		return
@@ -235,12 +268,17 @@ func invokeRoutes(intentName string, routes map[string]string, renames ...map[st
 				// 分页词用 args 里的原始意图参数（page/page_size），
 				// endpointParams 之后才被换算成端点的 current/pageSize。
 				res.Data = listWithTotal(data, envelope, args)
-			} else if hasData && isListAction(action) {
+			} else if hasData && isListAction(action) && endpointFailure(out) == "" {
 				// 列表端点命中 0 条时回的是 data:null（实测 content_place/list 就是）。
 				// 直接透传 null 会让调用方分不清「没有数据」与「调用出错」，
 				// 形状也不稳定（有时数组、有时 null、有时对象）——同一个工具的
 				// list 动作一会儿给数组一会儿给 null，调用方只能到处试。
 				// 归一成空数组：语义明确（「查过了，没有」），形状也稳定。
+				//
+				// ⚠️ 必须排除失败响应：端点失败时 data 也是 null，若无条件归一，
+				// 就会得到「data:[] + isError:true」这种自相矛盾的结果
+				// （2026-10-27 实测 commerce_fulfillment message_list 裸调即如此：
+				// 真实原因是缺必填 comm_order_id，却被包装成"查到了 0 条"）。
 				res.Data = []any{}
 			}
 		}
@@ -250,7 +288,7 @@ func invokeRoutes(intentName string, routes map[string]string, renames ...map[st
 
 // domainIntentCatalog 是补齐域的意图清单，由 init 合并进总的 IntentCatalog。
 // action 的归一化 list/detail/save/delete/setting_get/setting_save ...
-var domainIntentCatalog = []*IntentSpec{
+var domainIntentCatalog = append([]*IntentSpec{
 	// ───────────────────────── 内容域 ─────────────────────────
 	{
 		Name: "content_place", Title: "管理城市站", Domain: DomainContent, Risk: RiskWrite,
@@ -258,7 +296,7 @@ var domainIntentCatalog = []*IntentSpec{
 		Params: map[string]ParamSpec{
 			"action": {Type: "string", Desc: "操作", Required: true, Enum: []string{"list", "detail", "save", "delete", "setting_get", "setting_save"}},
 			"id":     {Type: "integer", Desc: "城市站 ID"},
-			"values": {Type: "object", Desc: "城市站内容（save 写操作）/配置内容（setting 写操作）"},
+			"values": {Type: "object", Desc: "城市站内容（save）/配置内容（setting 写操作）。save 时**未传的字段保持原值**，url_token 不传=不改链接、传空串=按标题重新生成"},
 		},
 		Required: []string{"action"},
 		Caps:     []string{"api_invoke"},
@@ -357,7 +395,7 @@ var domainIntentCatalog = []*IntentSpec{
 		Params: map[string]ParamSpec{
 			"action":    {Type: "string", Desc: "操作", Required: true, Enum: []string{"list", "detail", "save", "delete", "import", "category_list", "category_save", "category_delete"}},
 			"id":        {Type: "integer", Desc: "素材 ID"},
-			"values":    {Type: "object", Desc: "素材字段（save 时传入）"},
+			"values":    {Type: "object", Desc: "素材字段（save 时传入）。**未传的字段保持原值**；status=0 停用素材、传空 title 按正文自动截取标题；无需先 detail 回查"},
 			"page":      {Type: "integer", Desc: "页码，从 1 开始（列表类 action）", Default: 1},
 			"page_size": {Type: "integer", Desc: "每页条数（列表类 action）", Default: 20},
 		},
@@ -501,9 +539,10 @@ var domainIntentCatalog = []*IntentSpec{
 	{
 		Name: "commerce", Title: "会员/分组/分销商", Domain: DomainCommerce, Risk: RiskWrite,
 		Desc: "会员的增删改查与订单列表，会员分组的增删改查，分销商配置与审核。**默认关闭**，需 ExposedIntents 显式开启。" +
-			"action: user_list/user_get/user_create/user_update/user_delete/user_orders/group_list/group_detail/group_save/group_delete/retailer_list/retailer_detail/retailer_setting_get/retailer_setting_save/retailer_apply/retailer_realname。" +
+			"action: user_list/user_get/user_create/user_update/user_delete/user_orders/group_list/group_detail/group_save/group_delete/retailer_list/retailer_detail/retailer_setting_get/retailer_setting_save/retailer_apply/retailer_realname/wishlist_list。" +
 			"user_update 是**部分更新**，只传要改的字段即可，未传的字段自动沿用原值。" +
-			"group_save 与 retailer_setting_save 是全量覆盖语义，未登记的字段会被清成零值。",
+			"group_save 与 retailer_setting_save 是全量覆盖语义，未登记的字段会被清成零值。" +
+			"wishlist_list 只读：列出会员收藏的商品，可按 values.user_id 筛选。",
 		// 2026-10-07：默认关闭（交易域未随站点发行）。
 		// desc 里原先那段「意图层会先回查再补齐」的括号注释已移除：它描述的是
 		// preserveOnUpdate 机制，而该机制已于 2026-10-03 随根因修复删除
@@ -511,9 +550,9 @@ var domainIntentCatalog = []*IntentSpec{
 		// 留着等于在 desc 里陈述一个不存在的机制。面向调用方只需讲可观察的契约。
 		DefaultOff: true,
 		Params: map[string]ParamSpec{
-			"action":    {Type: "string", Desc: "操作", Required: true, Enum: []string{"user_list", "user_get", "user_create", "user_update", "user_delete", "user_orders", "group_list", "group_detail", "group_save", "group_delete", "retailer_list", "retailer_detail", "retailer_setting_get", "retailer_setting_save", "retailer_apply", "retailer_realname"}},
+			"action":    {Type: "string", Desc: "操作", Required: true, Enum: []string{"user_list", "user_get", "user_create", "user_update", "user_delete", "user_orders", "group_list", "group_detail", "group_save", "group_delete", "retailer_list", "retailer_detail", "retailer_setting_get", "retailer_setting_save", "retailer_apply", "retailer_realname", "wishlist_list"}},
 			"id":        {Type: "integer", Desc: "会员/分组/分销商 ID（retailer_apply / retailer_realname 也用会员的 id）"},
-			"user_name": {Type: "string", Desc: "用户名（user_create 用）"},
+			"user_name": {Type: "string", Desc: "用户名（user_create 必填且全站唯一，重名直接报错）"},
 			"password":  {Type: "string", Desc: "密码（user_create 必填；user_update 只在改密码时传）"},
 			"email":     {Type: "string", Desc: "邮箱"},
 			"phone":     {Type: "string", Desc: "手机号"},
@@ -522,11 +561,12 @@ var domainIntentCatalog = []*IntentSpec{
 			"page_size": {Type: "integer", Desc: "每页条数（*_list / user_orders）", Default: 20},
 			"values": {Type: "object", Desc: "按 action 传：" +
 				"· user_update: **部分更新**，只传要改的字段；未传的 email/phone/group_id/status 等会自动沿用原值\n" +
-				"· user_create: user_name、password(必填)、email、phone、group_id、status\n" +
+				"· user_create: user_name(必填、全站唯一，重名直接报错)、password(必填)、email、phone、group_id、status（成功回执 data.id 即新建用户 ID）\n" +
 				"· group_save: title、description、level(整数，越大权限越高)、price、favorable_price\n" +
 				"· retailer_setting_save: allow_self(整数 0/1)、become_retailer(整数，0=需审核 1=自动成为分销员)\n" +
 				"· retailer_apply: is_retailer(整数 0/1)\n" +
-				"· retailer_realname: real_name(真实姓名)"},
+				"· retailer_realname: real_name(真实姓名)\n" +
+				"· wishlist_list: 可选 user_id 只看某个会员的收藏；不传则列出全站愿望清单"},
 		},
 		Required: []string{"action"},
 		Caps:     []string{"api_invoke"},
@@ -547,6 +587,7 @@ var domainIntentCatalog = []*IntentSpec{
 			"retailer_setting_save": "POST /plugin/retailer/config",
 			"retailer_apply":        "POST /plugin/retailer/apply",
 			"retailer_realname":     "POST /plugin/retailer/realname",
+			"wishlist_list":         "GET /plugin/wishlist/list",
 		}),
 	},
 	{
@@ -661,7 +702,7 @@ var domainIntentCatalog = []*IntentSpec{
 		},
 		Required: []string{"action"},
 		Caps:     []string{"api_invoke"},
-		Compose: invokeRoutes("channel_wechat", map[string]string{
+		Compose: requireArgs(invokeRoutes("channel_wechat", map[string]string{
 			"menu_list":      "GET /plugin/wechat/menu/list",
 			"menu_save":      "POST /plugin/wechat/menu/save",
 			"menu_delete":    "POST /plugin/wechat/menu/delete",
@@ -672,6 +713,17 @@ var domainIntentCatalog = []*IntentSpec{
 			"rule_list":      "GET /plugin/wechat/reply/rule/list",
 			"rule_save":      "POST /plugin/wechat/reply/rule/save",
 			"rule_delete":    "POST /plugin/wechat/reply/rule/delete",
+		}), map[string][]string{
+			// 2026-10-27 实测：menu_save 不传 values 会写入一条 name 为空的菜单
+			// （前端菜单树里出现一个点不动的空节点）；rule_save 不传 content
+			// 会存下一条"触发但无回复"的规则，用户发关键词收到空白。
+			"menu_save": {"values.name"},
+			"rule_save": {"values.content"},
+			// 删除/回复缺 id 时端点报的是 ReadJSON 层错误，文案对调用方无指导性。
+			"menu_delete":    {"id"},
+			"message_reply":  {"id", "values.reply"},
+			"message_delete": {"id"},
+			"rule_delete":    {"id"},
 		}),
 	},
 	{
@@ -884,7 +936,7 @@ var domainIntentCatalog = []*IntentSpec{
 		},
 		Required: []string{"action"},
 		Caps:     []string{"api_invoke"},
-		Compose: invokeRoutes("siteops_maintain", map[string]string{
+		Compose: requireKeyPresent(invokeRoutes("siteops_maintain", map[string]string{
 			"robots_get":           "GET /plugin/robots",
 			"robots_set":           "POST /plugin/robots",
 			"cache_get":            "GET /plugin/htmlcache/config",
@@ -907,7 +959,13 @@ var domainIntentCatalog = []*IntentSpec{
 			"replace":              "POST /plugin/replace/values",
 			// content → robots：端点 POST /plugin/robots 的请求结构体字段名是
 			// robots（request.PluginRobotsConfig），不重命名则 ReadJSON 收不到值。
-		}, map[string]string{"content": "robots"}),
+		}, map[string]string{"content": "robots"}), map[string][]string{
+			// 2026-10-27 实测：robots_set 不传 content 会把 robots.txt **清空**
+			// 并回「配置已更新」。要清空应该显式传空串——但即便如此也不该
+			// 由"忘传参数"触发，故这里要求必须给出 content 键（允许空串）。
+			// 空串是合法意图（清空文件），所以校验用"键是否存在"而非"是否非空"。
+			"robots_set": {"content"},
+		}),
 	},
 	{
 		Name: "siteops_upgrade", Title: "版本检查与升级", Domain: DomainSiteOps, Risk: RiskSystem,
@@ -995,7 +1053,11 @@ var domainIntentCatalog = []*IntentSpec{
 			"helpers":        "GET /design/helpers",
 		}),
 	},
-}
+	// 商城（AnqiShop 合并）新增的四个意图单独成文件：见 catalog_shop.go。
+	// 用 append 拼接而不是另开一个 init()，是为了让「路径在 init 里追加」的顺序
+	// 依赖消失——Go 会先初始化被引用的变量，domainIntentCatalog 必然包含全部商城意图，
+	// 门禁测试（TestDomainIntentExposureIsDeliberate 遍历本切片）因此不会漏看它们。
+}, shopIntentCatalog...)
 
 // gatedDomainIntents 是补齐域中仍保持 DefaultOff 的意图及其理由。
 //
@@ -1016,7 +1078,12 @@ var gatedDomainIntents = map[string]string{
 	"contentops_transfer":  "跨站点数据迁移（主机级），覆盖目标站数据不可回滚",
 	"contentops_imagedeco": "配图/水印：上传字体图片文件并批量改写附件",
 	"commerce_pay":         "收款账户与支付证书，涉及资金凭证",
-	"commerce_finance":     "财务流水与提现审批，直接涉及资金", "channel_wechat": "公众号菜单与消息回复会同步到微信侧，对外可见",
+	"commerce_finance":     "财务流水与提现审批，直接涉及资金",
+	// 2026-10-25：商城合并带来的新端点，一并按交易域口径默认关闭。
+	"commerce_marketing":   "发券与做活动直接改价格（面额/活动价/门槛），发出去收不回来",
+	"commerce_fulfillment": "运费规则与对外报价：改错即算错运费，报价会真实发给客户",
+	"commerce_review":      "评价审核与增值服务定价，改错要等客户结算时才发现",
+	"seo_merchant":         "Google 商品同步：配置含 client_secret/refresh_token，且会向外推送商品数据", "channel_wechat": "公众号菜单与消息回复会同步到微信侧，对外可见",
 	"channel_thirdparty": "读写公众号/小程序/Google 授权配置（AppID、Secret）",
 	"channel_sendmail":   "SMTP 配置与测试发信，会真实投递邮件给收件人",
 	"channel_subscriber": "订阅用户群发（send），对外触达真实邮箱",

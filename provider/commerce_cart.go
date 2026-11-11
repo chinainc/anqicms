@@ -17,7 +17,7 @@ import (
 const CartItemLimit = 999
 
 // AddCart 加入购物车，同一商品累加数量
-func (w *Website) AddCart(userId uint, archiveId int64, quantity int) (*model.Cart, error) {
+func (w *Website) AddCart(userId uint, archiveId int64, quantity int) (*model.CommerceCart, error) {
 	if userId == 0 {
 		return nil, errors.New(w.Tr("PleaseLogin"))
 	}
@@ -35,7 +35,7 @@ func (w *Website) AddCart(userId uint, archiveId int64, quantity int) (*model.Ca
 		return nil, errors.New(w.Tr("InsufficientStock"))
 	}
 
-	var cart model.Cart
+	var cart model.CommerceCart
 	w.DB.Where("`user_id` = ? and `archive_id` = ?", userId, archiveId).Take(&cart)
 	if cart.Id > 0 {
 		cart.Quantity += quantity
@@ -44,7 +44,7 @@ func (w *Website) AddCart(userId uint, archiveId int64, quantity int) (*model.Ca
 		}
 		w.DB.Model(&cart).UpdateColumn("quantity", cart.Quantity)
 	} else {
-		cart = model.Cart{
+		cart = model.CommerceCart{
 			UserId:    userId,
 			ArchiveId: archiveId,
 			Quantity:  quantity,
@@ -59,7 +59,7 @@ func (w *Website) AddCart(userId uint, archiveId int64, quantity int) (*model.Ca
 
 // UpdateCartQuantity 修改数量，quantity<=0 表示移除
 func (w *Website) UpdateCartQuantity(userId, cartId uint, quantity int) error {
-	var cart model.Cart
+	var cart model.CommerceCart
 	if err := w.DB.Where("`id` = ? and `user_id` = ?", cartId, userId).Take(&cart).Error; err != nil {
 		return errors.New(w.Tr("TheContentDoesNotExist"))
 	}
@@ -74,17 +74,18 @@ func (w *Website) UpdateCartQuantity(userId, cartId uint, quantity int) error {
 
 // DeleteCart 移除购物车条目
 func (w *Website) DeleteCart(userId, cartId uint) error {
-	return w.DB.Where("`id` = ? and `user_id` = ?", cartId, userId).Delete(&model.Cart{}).Error
+	return w.DB.Where("`id` = ? and `user_id` = ?", cartId, userId).Delete(&model.CommerceCart{}).Error
 }
 
 // ClearCart 清空购物车
 func (w *Website) ClearCart(userId uint) error {
-	return w.DB.Where("`user_id` = ?", userId).Delete(&model.Cart{}).Error
+	return w.DB.Where("`user_id` = ?", userId).Delete(&model.CommerceCart{}).Error
 }
 
-// GetCartList 购物车列表，同时算出每条小计与合计（单位：分）
-func (w *Website) GetCartList(userId uint) ([]*model.Cart, int64) {
-	var carts []*model.Cart
+// GetCommerceCartList 购物车列表，同时算出每条小计与合计（单位：分）
+// （上游 3.8.0 的 GetCartList 签名不同，本地改名避免方法重声明）
+func (w *Website) GetCommerceCartList(userId uint) ([]*model.CommerceCart, int64) {
+	var carts []*model.CommerceCart
 	if userId == 0 {
 		return carts, 0
 	}
@@ -107,7 +108,7 @@ func (w *Website) GetCartList(userId uint) ([]*model.Cart, int64) {
 	}
 
 	var total int64
-	list := make([]*model.Cart, 0, len(carts))
+	list := make([]*model.CommerceCart, 0, len(carts))
 	for _, item := range carts {
 		archive, ok := archiveMap[item.ArchiveId]
 		if !ok {
@@ -132,13 +133,13 @@ func (w *Website) CountCart(userId uint) int64 {
 		return 0
 	}
 	var total int64
-	w.DB.Model(&model.Cart{}).Where("`user_id` = ?", userId).Count(&total)
+	w.DB.Model(&model.CommerceCart{}).Where("`user_id` = ?", userId).Count(&total)
 	return total
 }
 
 // CheckoutCart 购物车结算，req 只需带地址与备注
 func (w *Website) CheckoutCart(userId uint, req *request.OrderRequest) (*model.Order, error) {
-	carts, total := w.GetCartList(userId)
+	carts, total := w.GetCommerceCartList(userId)
 	if len(carts) == 0 {
 		return nil, errors.New(w.Tr("CartIsEmpty"))
 	}

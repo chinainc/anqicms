@@ -189,6 +189,7 @@ func AutoMigrateDB(db *gorm.DB, force bool) error {
 
 			&model.User{},
 			&model.UserGroup{},
+			&model.LoginLog{},
 			&model.UserWechat{},
 			&model.UserWithdraw{},
 			&model.WeappQrcode{},
@@ -204,8 +205,19 @@ func AutoMigrateDB(db *gorm.DB, force bool) error {
 			&model.WechatMessage{},
 			&model.WechatReplyRule{},
 			&model.TagContent{},
+			&model.ExchangeRate{},
+			&model.ExchangeRateHistory{},
+			&model.ArchiveOption{},
+			&model.ArchiveOptionValue{},
+			&model.ArchiveSku{},
+			&model.Coupon{},
+			&model.CouponCode{},
+			&model.CouponArchive{},
 			&model.Subscriber{},
 			&model.SubscriberCategory{},
+			&model.Wishlist{},
+			&model.OrderReview{},
+			&model.OrderReviewPraise{},
 			&model.ArchiveFavorite{},
 			&model.AiChatMessage{},
 			&model.AiAgent{},
@@ -214,15 +226,27 @@ func AutoMigrateDB(db *gorm.DB, force bool) error {
 			&model.AiUsageLog{},
 			&model.AiMcpAuditLog{},
 			&model.Place{},
+			&model.Cart{},
+			&model.SearchLog{},
+			&model.WholesaleRule{},
+			&model.CommunicationOrder{},
+			&model.CommunicationMessage{},
+			&model.Activity{},
+			&model.ActivitySku{},
+			&model.OrderService{},
+			&model.OrderServiceAddon{},
+			&model.ProductSyncStatus{},
+			&model.ProductSyncLog{},
 			&model.PaymentAccount{},
 			&model.PaymentStatistic{},
 			&model.MailPlan{},
 			// 会员商城：购物车 / 积分 / 签到 / 店铺 / 保证金
-			&model.Cart{},
+			&model.CommerceCart{},
 			&model.PointLog{},
 			&model.UserSign{},
 			&model.Shop{},
 			&model.ShopDepositLog{},
+			&model.OrderOptionStock{},
 		}
 		//自动迁移数据库
 		err := db.Set("gorm:table_options", "DEFAULT CHARSET=utf8mb4").AutoMigrate(models...)
@@ -300,11 +324,17 @@ func AutoMigrateDB(db *gorm.DB, force bool) error {
 }
 
 func (w *Website) InitModelData() {
+	// 老站库的 modules 表没有 kind 列，Automigrate 又只在版本变化时跑，
+	// 所以这里无条件补一次（幂等）。
+	_ = w.ensureModuleKindColumn()
+	// 商品属性拆表（3.7.1 回填 + 3.8.0 删列），顺序与失败闸门见 initArchiveSchema。
+	w.initArchiveSchema()
 	// 检查默认模型，如果没有，则添加, 默认的模型：1 文章，2 产品
 	var modules = []model.Module{
 		{
 			Id:        1,
 			TableName: "article",
+			Kind:      model.ModuleKindArticle,
 			UrlToken:  "news",
 			Name:      w.Tr("articleModule"),
 			Title:     w.Tr("ArticleCenter"),
@@ -315,6 +345,7 @@ func (w *Website) InitModelData() {
 		{
 			Id:        2,
 			TableName: "product",
+			Kind:      model.ModuleKindProduct,
 			UrlToken:  "product",
 			Name:      w.Tr("productModule"),
 			Title:     w.Tr("ProductCenter"),

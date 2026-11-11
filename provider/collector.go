@@ -223,13 +223,13 @@ func (w *Website) CollectArticlesByKeyword(keyword model.Keyword, focus bool) (t
 func (w *Website) SaveCollectArticle(archive *request.Archive, keyword *model.Keyword) error {
 	//原始标题
 	archive.OriginTitle = archive.Title
-	archive.OriginId = config.ArchiveFromCollect
+	archive.OriginId = library.Ptr(config.ArchiveFromCollect)
 
 	if w.checkArticleExists(archive.OriginUrl, archive.OriginTitle, archive.Title) {
 		return errors.New(w.Tr("AlreadyExistsInTheDatabase"))
 	}
 
-	archive.KeywordId = keyword.Id
+	archive.KeywordId = library.Ptr(keyword.Id)
 	categoryId := keyword.CategoryId
 	if categoryId == 0 {
 		if len(w.CollectorConfig.CategoryIds) > 0 {
@@ -1229,6 +1229,9 @@ func (w *Website) GetTodayArticleCount(from int) int64 {
 			return w.cachedTodayArticleCount.AiGenerateCount
 		}
 		return w.cachedTodayArticleCount.CollectCount
+	} else if w.cachedTodayArticleCount.Day > 0 {
+		// 不同天
+		return 0
 	}
 
 	// 不同天或首次调用：重置缓存并从数据库重新统计当天数量

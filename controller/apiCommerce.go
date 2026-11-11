@@ -33,9 +33,9 @@ func apiCommerceFail(ctx iris.Context, msg string) {
 
 // ---------------------------------------------------------------- 购物车
 
-func ApiCartList(ctx iris.Context) {
+func ApiCommerceCartList(ctx iris.Context) {
 	currentSite := provider.CurrentSite(ctx)
-	carts, total := currentSite.GetCartList(apiCommerceUser(ctx))
+	carts, total := currentSite.GetCommerceCartList(apiCommerceUser(ctx))
 	apiCommerceOK(ctx, iris.Map{
 		"list":  carts,
 		"total": total,
@@ -43,9 +43,9 @@ func ApiCartList(ctx iris.Context) {
 	})
 }
 
-func ApiCartAdd(ctx iris.Context) {
+func ApiCommerceCartAdd(ctx iris.Context) {
 	currentSite := provider.CurrentSite(ctx)
-	var req request.CartRequest
+	var req request.CommerceCartRequest
 	if err := ctx.ReadJSON(&req); err != nil {
 		apiCommerceFail(ctx, err.Error())
 		return
@@ -61,9 +61,9 @@ func ApiCartAdd(ctx iris.Context) {
 	})
 }
 
-func ApiCartUpdate(ctx iris.Context) {
+func ApiCommerceCartUpdate(ctx iris.Context) {
 	currentSite := provider.CurrentSite(ctx)
-	var req request.CartRequest
+	var req request.CommerceCartRequest
 	if err := ctx.ReadJSON(&req); err != nil {
 		apiCommerceFail(ctx, err.Error())
 		return
@@ -72,13 +72,13 @@ func ApiCartUpdate(ctx iris.Context) {
 		apiCommerceFail(ctx, err.Error())
 		return
 	}
-	carts, total := currentSite.GetCartList(apiCommerceUser(ctx))
+	carts, total := currentSite.GetCommerceCartList(apiCommerceUser(ctx))
 	apiCommerceOK(ctx, iris.Map{"list": carts, "total": total})
 }
 
-func ApiCartDelete(ctx iris.Context) {
+func ApiCommerceCartDelete(ctx iris.Context) {
 	currentSite := provider.CurrentSite(ctx)
-	var req request.CartRequest
+	var req request.CommerceCartRequest
 	if err := ctx.ReadJSON(&req); err != nil {
 		apiCommerceFail(ctx, err.Error())
 		return
@@ -87,11 +87,11 @@ func ApiCartDelete(ctx iris.Context) {
 		apiCommerceFail(ctx, err.Error())
 		return
 	}
-	carts, total := currentSite.GetCartList(apiCommerceUser(ctx))
+	carts, total := currentSite.GetCommerceCartList(apiCommerceUser(ctx))
 	apiCommerceOK(ctx, iris.Map{"list": carts, "total": total})
 }
 
-func ApiCartClear(ctx iris.Context) {
+func ApiCommerceCartClear(ctx iris.Context) {
 	currentSite := provider.CurrentSite(ctx)
 	if err := currentSite.ClearCart(apiCommerceUser(ctx)); err != nil {
 		apiCommerceFail(ctx, err.Error())
@@ -100,7 +100,7 @@ func ApiCartClear(ctx iris.Context) {
 	apiCommerceOK(ctx, iris.Map{})
 }
 
-func ApiCartCheckout(ctx iris.Context) {
+func ApiCommerceCartCheckout(ctx iris.Context) {
 	currentSite := provider.CurrentSite(ctx)
 	var req request.OrderRequest
 	// 允许空 body（只结算购物车）

@@ -17,8 +17,9 @@ type DepositRequest struct {
 	Amount int64 `json:"amount"` // 单位：分
 }
 
-// CartRequest 购物车操作
-type CartRequest struct {
+// CommerceCartRequest 会员商城购物车操作
+// （上游 3.8.0 的 request.CartRequest 字段集不同，改名并存）
+type CommerceCartRequest struct {
 	ArchiveId int64 `json:"archive_id"`
 	CartId    uint  `json:"cart_id"`
 	Quantity  int   `json:"quantity"`

@@ -85,6 +85,35 @@ func (v *verifyCodeCache) GC() {
 	}
 }
 
+// Verify 校验验证码（本地扩展：上游版本没有该方法）。
+// clear=true 时校验通过即消费；false 时保留，输错可重试。
+func (v *verifyCodeCache) Verify(key string, code string, clear bool) bool {
+	item, ok := v.list[key]
+	if !ok {
+		return false
+	}
+	if item.Expire < time.Now().Unix() || item.code != code {
+		return false
+	}
+	if clear {
+		v.mu.Lock()
+		delete(v.list, key)
+		v.size--
+		v.mu.Unlock()
+	}
+	return true
+}
+
+// Delete 主动删除某个 key 的验证码（本地扩展）
+func (v *verifyCodeCache) Delete(key string) {
+	v.mu.Lock()
+	if _, ok := v.list[key]; ok {
+		delete(v.list, key)
+		v.size--
+	}
+	v.mu.Unlock()
+}
+
 func init() {
 	CodeCache = verifyCodeCache{
 		size: 0,

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"gorm.io/gorm"
+
 	"kandaoni.com/anqicms/config"
 	"kandaoni.com/anqicms/library"
 	"kandaoni.com/anqicms/model"
@@ -16,11 +18,17 @@ import (
 	"kandaoni.com/anqicms/request"
 )
 
-func (w *Website) GetTagList(itemId int64, title string, categoryIds []uint, firstLetter string, currentPage, pageSize int, offset int, order string) ([]*model.Tag, int64, error) {
+// GetTagList 分页查询标签列表。
+//
+// offset 由调用方显式计算后传入，这里不再按页码二次推算——否则调用方算好的
+// 偏移会被静默覆盖，`limit=20,10` 这类显式偏移与 `page` 混用时行为不可预期。
+//
+// needTotal 为 false 时**不执行 count**。tags 表在真实站点上轻易到十几万行
+// （采集/导入的残留标签），一次 SELECT count(*) 就是一次全索引扫描，
+// 而不分页的 list 调用方根本用不到精确总数。曾经因为每个 tag 列表请求都无条件
+// count，叠加扒站方按 ?page=N 无限翻页，单机打出 60 条/分的慢查询把 CPU 拉满。
+func (w *Website) GetTagList(itemId int64, title string, categoryIds []uint, firstLetter string, offset, pageSize int, needTotal bool, order string) ([]*model.Tag, int64, error) {
 	var tags []*model.Tag
-	if currentPage > 1 {
-		offset = (currentPage - 1) * pageSize
-	}
 	if order != "" {
 		order = ParseOrderBy(order, "")
 	} else {
@@ -28,34 +36,75 @@ func (w *Website) GetTagList(itemId int64, title string, categoryIds []uint, fir
 		order = "id desc"
 	}
 
-	var total int64
-
-	builder := w.DB.WithContext(w.Ctx()).Model(&model.Tag{}).Order(order)
-	if firstLetter != "" {
-		builder = builder.Where("`first_letter` = ?", firstLetter)
-	}
+	// itemId 过滤用的 tag_id 先查出来，供列表查询与 count 估算共用。
+	var itemTagIds []uint
 	if itemId != 0 {
-		var ids []uint
-		w.DB.WithContext(w.Ctx()).Model(&model.TagData{}).Where("`item_id` = ?", itemId).Pluck("tag_id", &ids)
-		if len(ids) == 0 {
+		w.DB.WithContext(w.Ctx()).Model(&model.TagData{}).Where("`item_id` = ?", itemId).Pluck("tag_id", &itemTagIds)
+		if len(itemTagIds) == 0 {
 			// 不用再查询了，直接返回结果
 			return tags, 0, nil
 		}
-		builder = builder.Where("`id` IN(?)", ids)
 	}
-	if title != "" {
-		builder = builder.Where("`title` like ?", "%"+title+"%")
+
+	// 筛选条件只声明一次，列表查询与 count 估算共用，避免两条路径条件漂移。
+	apply := func(db *gorm.DB) *gorm.DB {
+		if firstLetter != "" {
+			db = db.Where("`first_letter` = ?", firstLetter)
+		}
+		if len(itemTagIds) > 0 {
+			db = db.Where("`id` IN(?)", itemTagIds)
+		}
+		if title != "" {
+			db = db.Where("`title` like ?", "%"+title+"%")
+		}
+		if len(categoryIds) > 0 {
+			if len(categoryIds) == 1 {
+				db = db.Where("`category_id` = ?", categoryIds[0])
+			} else {
+				db = db.Where("`category_id` IN(?)", categoryIds)
+			}
+		}
+		return db
 	}
-	if len(categoryIds) > 0 {
-		if len(categoryIds) == 1 {
-			builder = builder.Where("`category_id` = ?", categoryIds[0])
-		} else {
-			builder = builder.Where("`category_id` IN(?)", categoryIds)
+
+	builder := apply(w.DB.WithContext(w.Ctx()).Model(&model.Tag{})).Order(order)
+
+	if !needTotal {
+		// list 模式：跳过 count，total 退回本页条数（与 GetArchiveList 一致）。
+		if err := builder.Limit(pageSize).Offset(offset).Find(&tags).Error; err != nil {
+			return nil, 0, err
+		}
+		return tags, int64(len(tags)), nil
+	}
+
+	// 分页模式：count 结果缓存 300s；行数超 10 万的表用 EXPLAIN 估算，
+	// 不再真扫全表。与 GetArchiveList 的处理方式保持一致。
+	var total int64
+	sqlCount := w.DB.WithContext(w.Ctx()).ToSQL(func(tx *gorm.DB) *gorm.DB {
+		return apply(tx.Model(&model.Tag{})).Order(order).Find(&[]*model.Tag{})
+	})
+	cacheKeyCount := "tag-list-count-" + library.Md5(sqlCount)[8:24]
+	// Cache 可能是 nil（半初始化的站点，见 anchor_test.go 的注释），
+	// 缓存只是优化，缺了不能影响取数。
+	cacheHit := false
+	if w.Cache != nil {
+		if err := w.Cache.Get(cacheKeyCount, &total); err == nil {
+			cacheHit = true
+		}
+	}
+	if !cacheHit {
+		total = w.GetExplainCount(sqlCount)
+		if total < 100000 {
+			if countErr := builder.Count(&total).Error; countErr != nil {
+				return nil, 0, countErr
+			}
+		}
+		if w.Cache != nil {
+			_ = w.Cache.Set(cacheKeyCount, total, 300)
 		}
 	}
 
-	err := builder.Count(&total).Limit(pageSize).Offset(offset).Find(&tags).Error
-	if err != nil {
+	if err := builder.Limit(pageSize).Offset(offset).Find(&tags).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -129,10 +178,8 @@ func (w *Website) DeleteTag(id uint) error {
 func (w *Website) SaveTag(req *request.PluginTag) (tag *model.Tag, err error) {
 	newPost := false
 	req.Title = strings.TrimSpace(req.Title)
-	if len(req.Title) == 0 {
-		return nil, errors.New(w.Tr("TagNameCannotBeEmpty"))
-	}
 	if req.Id > 0 {
+		// 有 id 就按 id 定位：更新时不传标题 = 不改标题。
 		tag, err = w.GetTagById(req.Id)
 		if err != nil {
 			// 表示不存在，则新建一个
@@ -143,6 +190,10 @@ func (w *Website) SaveTag(req *request.PluginTag) (tag *model.Tag, err error) {
 			newPost = true
 		}
 	} else {
+		// 没给 id：按标题查重（同名视为同一个标签），空标题没法查。
+		if len(req.Title) == 0 {
+			return nil, errors.New(w.Tr("TagNameCannotBeEmpty"))
+		}
 		tag, err = w.GetTagByTitle(req.Title)
 		if err != nil {
 			tag = &model.Tag{
@@ -151,30 +202,39 @@ func (w *Website) SaveTag(req *request.PluginTag) (tag *model.Tag, err error) {
 			newPost = true
 		}
 	}
-	if req.UpdateAll || req.Title != "" {
+	// 只有「新建」才强制要求标题。原来是无条件要求，于是 PATCH
+	// 「把 5 号标签隐藏」（只传 id + status）会被判成「标签名称不能为空」。
+	if newPost && len(req.Title) == 0 {
+		return nil, errors.New(w.Tr("TagNameCannotBeEmpty"))
+	}
+	// 标题必填，空值永远不是合法写入值：UpdateAll 下漏传也不能把已有名字清空。
+	if req.Title != "" {
 		tag.Title = req.Title
 	}
-	if req.UpdateAll || req.SeoTitle != "" {
-		tag.SeoTitle = req.SeoTitle
+	if req.SeoTitle != nil {
+		tag.SeoTitle = *req.SeoTitle
 	}
-	if req.UpdateAll || req.Keywords != "" {
-		tag.Keywords = req.Keywords
+	if req.Keywords != nil {
+		tag.Keywords = *req.Keywords
 	}
-	tag.Status = 1
-	if req.UpdateAll || req.Description != "" {
-		tag.Description = req.Description
+	// 原来这里硬编码 tag.Status = 1，标签永远无法隐藏。
+	if req.Status != nil {
+		tag.Status = *req.Status
 	}
-	if req.UpdateAll || req.FirstLetter != "" {
-		tag.FirstLetter = req.FirstLetter
+	if req.Description != nil {
+		tag.Description = *req.Description
 	}
-	if req.UpdateAll || req.CategoryId > 0 {
-		tag.CategoryId = req.CategoryId
+	if req.FirstLetter != nil {
+		tag.FirstLetter = *req.FirstLetter
 	}
-	if req.UpdateAll || req.Template != "" {
-		tag.Template = req.Template
+	if req.CategoryId != nil {
+		tag.CategoryId = *req.CategoryId
 	}
-	if req.UpdateAll || req.Logo != "" {
-		tag.Logo = req.Logo
+	if req.Template != nil {
+		tag.Template = *req.Template
+	}
+	if req.Logo != nil {
+		tag.Logo = *req.Logo
 	}
 	if tag.Logo != "" {
 		tag.Logo = config.StripStorageUrl(tag.Logo, w.PluginStorage.StorageUrl)
@@ -198,13 +258,14 @@ func (w *Website) SaveTag(req *request.PluginTag) (tag *model.Tag, err error) {
 		return
 	}
 	w.CleanCachedTags()
-	// 保存 content
-	if len(req.Content) > 0 || len(req.Extra) > 0 {
-		if req.Content != "" {
+	// 保存 content：nil = 不改内容表，非 nil（含空串）= 覆盖。
+	content := ""
+	if req.Content != nil || len(req.Extra) > 0 {
+		if req.Content != nil {
 			// 将单个&nbsp;替换为空格
-			req.Content = library.ReplaceSingleSpace(req.Content)
+			content = library.ReplaceSingleSpace(*req.Content)
 			// todo 应该只替换 src,href 中的 baseUrl
-			req.Content = w.ReplaceContentUrl(req.Content, false)
+			content = w.ReplaceContentUrl(content, false)
 			// 过滤外链
 			if w.Content.FilterOutlink == 1 || w.Content.FilterOutlink == 2 {
 				baseHost := ""
@@ -218,7 +279,7 @@ func (w *Website) SaveTag(req *request.PluginTag) (tag *model.Tag, err error) {
 				}
 
 				re, _ := regexp.Compile(`(?i)<a.*?href="(.+?)".*?>(.*?)</a>`)
-				req.Content = re.ReplaceAllStringFunc(req.Content, func(s string) string {
+				content = re.ReplaceAllStringFunc(content, func(s string) string {
 					match := re.FindStringSubmatch(s)
 					if len(match) < 3 {
 						return s
@@ -240,7 +301,7 @@ func (w *Website) SaveTag(req *request.PluginTag) (tag *model.Tag, err error) {
 				// 匹配Markdown [link](url)
 				// 由于不支持零宽断言，因此匹配所有
 				re, _ = regexp.Compile(`!?\[([^]]*)\]\(([^)]+)\)`)
-				req.Content = re.ReplaceAllStringFunc(req.Content, func(s string) string {
+				content = re.ReplaceAllStringFunc(content, func(s string) string {
 					// 过滤掉 ! 开头的
 					if strings.HasPrefix(s, "!") {
 						return s
@@ -293,10 +354,20 @@ func (w *Website) SaveTag(req *request.PluginTag) (tag *model.Tag, err error) {
 				}
 			}
 		}
+		// 只传 content 或只传 extra 时，另一侧必须保持库里原值：
+		// GORM Save 写全列，直接写 nil 会把已有的扩展字段/正文抹掉。
+		var existContent model.TagContent
+		_ = w.DB.Where("`id` = ?", tag.Id).Limit(1).Find(&existContent).Error
 		tagContent := &model.TagContent{
 			Id:      tag.Id,
-			Content: req.Content,
-			Extra:   req.Extra,
+			Content: existContent.Content,
+			Extra:   existContent.Extra,
+		}
+		if req.Content != nil {
+			tagContent.Content = content
+		}
+		if req.Extra != nil {
+			tagContent.Extra = req.Extra
 		}
 		err = w.DB.Save(tagContent).Error
 		if err != nil {

@@ -3,6 +3,7 @@ package provider
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -80,12 +81,16 @@ func (w *Website) SaveCategory(req *request.Category) (category *model.Category,
 	if req.Id > 0 {
 		category, err = w.GetCategoryById(req.Id)
 		if err != nil {
-			// 表示不存在，则新建一个
-			category = &model.Category{
-				Status: 1,
-			}
-			category.Id = req.Id
-			newPost = true
+			// 传了 id 就是**更新**语义：目标不存在必须报错。
+			//
+			// 这里曾做成"不存在则新建一个并沿用 req.Id"，于是调用方（AI 或后台）
+			// 传错 id 时会凭空造出一条指定主键的幽灵分类，回执还是 ok + 对象体——
+			// 调用方以为改成功了某条已有数据（2026-10-27 实测：
+			// content_manage category_update id=999999 直接建出了 id=999999 的空分类）。
+			// 空分类会进前台导航与 sitemap，且没有标题，很难发现是从哪来的。
+			//
+			// 真需要"按指定 id 导入"的场景应走导入通道，不该复用更新入口。
+			return nil, fmt.Errorf("分类不存在: id=%d", req.Id)
 		}
 	} else {
 		category = &model.Category{
@@ -93,17 +98,21 @@ func (w *Website) SaveCategory(req *request.Category) (category *model.Category,
 		}
 		newPost = true
 	}
-	if req.UpdateAll || req.Title != "" {
+	// ⚠️ 标量字段一律「指针非 nil 才写」：`if req.X > 0` / `req.X != ""` 会让
+	// 0（隐藏分类、移到顶级、排序复位）与空串（清空 SEO 标题/模板）永远写不进去。
+	// 护栏见 provider/archive_zero_guard_test.go。
+	// 标题必填，空值永远不是合法写入值：UpdateAll 下漏传也不能把已有标题清空。
+	if req.Title != "" {
 		category.Title = req.Title
 	}
-	if req.UpdateAll || req.SeoTitle != "" {
-		category.SeoTitle = req.SeoTitle
+	if req.SeoTitle != nil {
+		category.SeoTitle = *req.SeoTitle
 	}
-	if req.UpdateAll || req.Keywords != "" {
-		category.Keywords = req.Keywords
+	if req.Keywords != nil {
+		category.Keywords = *req.Keywords
 	}
-	if req.UpdateAll || req.Description != "" {
-		category.Description = req.Description
+	if req.Description != nil {
+		category.Description = *req.Description
 	}
 	if req.UpdateAll || req.Type > 0 {
 		category.Type = req.Type
@@ -111,29 +120,29 @@ func (w *Website) SaveCategory(req *request.Category) (category *model.Category,
 	if req.UpdateAll || req.ModuleId > 0 {
 		category.ModuleId = req.ModuleId
 	}
-	if req.UpdateAll || req.ParentId > 0 {
-		category.ParentId = req.ParentId
+	if req.ParentId != nil {
+		category.ParentId = *req.ParentId
 	}
-	if req.UpdateAll || req.Sort > 0 {
-		category.Sort = req.Sort
+	if req.Sort != nil {
+		category.Sort = *req.Sort
 	}
-	if req.UpdateAll || req.Status > 0 {
-		category.Status = req.Status
+	if req.Status != nil {
+		category.Status = *req.Status
 	}
-	if req.UpdateAll || req.Template != "" {
-		category.Template = req.Template
+	if req.Template != nil {
+		category.Template = *req.Template
 	}
-	if req.UpdateAll || req.DetailTemplate != "" {
-		category.DetailTemplate = req.DetailTemplate
+	if req.DetailTemplate != nil {
+		category.DetailTemplate = *req.DetailTemplate
 	}
-	if req.UpdateAll || req.IsInherit > 0 {
-		category.IsInherit = req.IsInherit
+	if req.IsInherit != nil {
+		category.IsInherit = *req.IsInherit
 	}
-	if req.UpdateAll || len(req.Images) > 0 {
-		category.Images = req.Images
+	if req.Images != nil {
+		category.Images = *req.Images
 	}
-	if req.UpdateAll || req.Logo != "" {
-		category.Logo = req.Logo
+	if req.Logo != nil {
+		category.Logo = *req.Logo
 	}
 	if req.Extra != nil {
 		category.Extra = req.Extra
@@ -181,11 +190,10 @@ func (w *Website) SaveCategory(req *request.Category) (category *model.Category,
 	if category.Type == config.CategoryTypePage {
 		category.ModuleId = 0
 	}
-	if req.UpdateAll || req.Content != "" {
+	if req.Content != nil {
 		// 将单个&nbsp;替换为空格
-		req.Content = library.ReplaceSingleSpace(req.Content)
-		req.Content = w.ReplaceContentUrl(req.Content, false)
-		category.Content = req.Content
+		content := library.ReplaceSingleSpace(*req.Content)
+		category.Content = w.ReplaceContentUrl(content, false)
 	}
 	if category.Extra != nil {
 		module := w.GetModuleFromCache(category.ModuleId)

@@ -323,9 +323,9 @@ func (w *Website) GetArchiveList(ops func(tx *gorm.DB) *gorm.DB, order string, c
 		w.DB.Raw(sql).Pluck("id", &archiveIds)
 		if len(archiveIds) > 0 {
 			if draft {
-				w.DB.Table("`archive_drafts` as archives").Where("id IN (?)", archiveIds).Order(order).Scan(&archives)
+				w.DB.Table("`archive_drafts` as archives").Where("id IN (?)", archiveIds).Order(order).Find(&archives)
 			} else {
-				w.DB.Model(&model.Archive{}).Where("id IN (?)", archiveIds).Order(order).Scan(&archives)
+				w.DB.Model(&model.Archive{}).Where("id IN (?)", archiveIds).Order(order).Find(&archives)
 			}
 		}
 		for i := range archives {
@@ -374,9 +374,9 @@ func (w *Website) GetArchiveList(ops func(tx *gorm.DB) *gorm.DB, order string, c
 		//	builder.Pluck("id", &archiveIds)
 		if len(archiveIds) > 0 {
 			if draft {
-				w.DB.Table("`archive_drafts` as archives").Where("id IN (?)", archiveIds).Order(order).Scan(&archives)
+				w.DB.Table("`archive_drafts` as archives").Where("id IN (?)", archiveIds).Order(order).Find(&archives)
 			} else {
-				w.DB.Model(&model.Archive{}).Where("id IN (?)", archiveIds).Order(order).Scan(&archives)
+				w.DB.Model(&model.Archive{}).Where("id IN (?)", archiveIds).Order(order).Find(&archives)
 			}
 		}
 		for i := range archives {
@@ -534,25 +534,28 @@ func (w *Website) SaveArchive(req *request.Archive) (*model.Archive, error) {
 		return nil, err
 	}
 
-	if len(req.CategoryIds) > 0 {
-		for i := 0; i < len(req.CategoryIds); i++ {
-			// 防止 0
-			if req.CategoryIds[i] == 0 {
-				req.CategoryIds = append(req.CategoryIds[:i], req.CategoryIds[i+1:]...)
+	// 多分类归一：只给 category_id 时等价于「只保留这一个分类」；
+	// nil 保持 nil（= 调用方没提分类，不改），空数组保持空数组（新建时会被下面拦下）。
+	if req.CategoryIds == nil && req.CategoryId > 0 {
+		req.CategoryIds = library.Ptr([]uint{req.CategoryId})
+	}
+	if req.CategoryIds != nil {
+		nonZero := make([]uint, 0, len(*req.CategoryIds))
+		for _, catId := range *req.CategoryIds {
+			if catId > 0 {
+				nonZero = append(nonZero, catId)
 			}
 		}
-	}
-	if len(req.CategoryIds) == 0 && req.CategoryId > 0 {
-		req.CategoryIds = append(req.CategoryIds, req.CategoryId)
-	}
-	for _, catId := range req.CategoryIds {
-		category := w.GetCategoryFromCache(catId)
-		if category == nil || category.Type != config.CategoryTypeArchive {
-			return nil, errors.New(w.Tr("PleaseSelectAColumn"))
+		req.CategoryIds = &nonZero
+		for _, catId := range nonZero {
+			category := w.GetCategoryFromCache(catId)
+			if category == nil || category.Type != config.CategoryTypeArchive {
+				return nil, errors.New(w.Tr("PleaseSelectAColumn"))
+			}
 		}
-	}
-	if len(req.CategoryIds) > 0 {
-		req.CategoryId = req.CategoryIds[0]
+		if len(nonZero) > 0 {
+			req.CategoryId = nonZero[0]
+		}
 	}
 
 	if req.CategoryId > 0 {
@@ -591,7 +594,7 @@ func (w *Website) SaveArchive(req *request.Archive) (*model.Archive, error) {
 		newPost = true
 		draft = &model.ArchiveDraft{}
 
-		if len(req.CategoryIds) == 0 {
+		if req.CategoryIds == nil || len(*req.CategoryIds) == 0 {
 			return nil, errors.New(w.Tr("PleaseSelectAColumn"))
 		}
 		category, err = w.GetCategoryById(req.CategoryId)
@@ -632,42 +635,45 @@ func (w *Website) SaveArchive(req *request.Archive) (*model.Archive, error) {
 			req.Title = req.Title[:strings.LastIndexAny(req.Title, " ")]
 		}
 	}
-	//提取描述
-	if req.Description == "" {
+	// 提取描述：没传（nil）或整表单提交时留空，都按正文自动截取；
+	// PATCH 下显式传空串表示「清空描述」，不再自动回填。
+	if req.Description == nil || (req.UpdateAll && *req.Description == "") {
 		tmpContent := req.Content
 		if w.Content.Editor == "markdown" {
 			tmpContent = library.MarkdownToHTML(tmpContent)
 		}
-		req.Description = library.ParseDescription(strings.ReplaceAll(CleanTagsAndSpaces(tmpContent), "\n", " "), 250)
+		req.Description = library.Ptr(library.ParseDescription(strings.ReplaceAll(CleanTagsAndSpaces(tmpContent), "\n", " "), 250))
 	}
 	// 限制数量
-	descRunes := []rune(req.Description)
-	if len(descRunes) > 1000 {
-		req.Description = string(descRunes[:1000])
+	if req.Description != nil {
+		descRunes := []rune(*req.Description)
+		if len(descRunes) > 1000 {
+			req.Description = library.Ptr(string(descRunes[:1000]))
+		}
 	}
-	if len(req.Flag) > 0 {
-		req.Flags = strings.Split(req.Flag, ",")
+	if len(req.Flag) > 0 && req.Flags == nil {
+		req.Flags = library.Ptr(strings.Split(req.Flag, ","))
 	}
 
 	if req.QuickSave {
-		// quick save 只支持6个字段
+		// 快速保存只处理标题/关键词/描述/分类/图片，其余字段一律不动。
 		if req.ModuleId > 0 {
 			draft.ModuleId = req.ModuleId
 		}
 		if req.Title != "" {
 			draft.Title = req.Title
 		}
-		if req.Keywords != "" {
-			draft.Keywords = req.Keywords
+		if req.Keywords != nil {
+			draft.Keywords = *req.Keywords
 		}
-		if req.Description != "" {
-			draft.Description = req.Description
+		if req.Description != nil {
+			draft.Description = *req.Description
 		}
 		if req.CategoryId > 0 {
 			draft.CategoryId = req.CategoryId
 		}
-		if len(req.Images) > 0 {
-			draft.Images = req.Images
+		if req.Images != nil {
+			draft.Images = *req.Images
 		}
 		// 保存主表
 		if isReleased {
@@ -690,20 +696,16 @@ func (w *Website) SaveArchive(req *request.Archive) (*model.Archive, error) {
 			w.DB.Save(&archiveData)
 		}
 		// 保存Flags
-		if len(req.Flags) > 0 {
-			_ = w.SaveArchiveFlags(draft.Id, req.Flags)
-		} else if req.RemoveFlag {
-			_ = w.SaveArchiveFlags(draft.Id, nil)
+		if req.Flags != nil {
+			_ = w.SaveArchiveFlags(draft.Id, *req.Flags)
 		}
-		if len(req.CategoryIds) > 0 {
+		if req.CategoryIds != nil {
 			// 保存分类ID
-			_ = w.SaveArchiveCategories(draft.Id, req.CategoryIds)
+			_ = w.SaveArchiveCategories(draft.Id, *req.CategoryIds)
 		}
-		// tags
-		if len(req.Tags) > 0 {
-			_ = w.SaveTagData(draft.Id, req.Tags)
-		} else if req.RemoveTag {
-			_ = w.SaveTagData(draft.Id, nil)
+		// tags：传了 tags（含空数组）就按传入值覆盖，没传则只做自动匹配
+		if req.Tags != nil {
+			_ = w.SaveTagData(draft.Id, *req.Tags)
 		} else if w.Content.MatchTag == 1 {
 			// 自动匹配标签
 			_ = w.AutoMatchTag(&draft.Archive)
@@ -724,70 +726,82 @@ func (w *Website) SaveArchive(req *request.Archive) (*model.Archive, error) {
 		return &draft.Archive, nil
 	}
 	// 正常的保存行为
+	//
+	// ⚠️ 标量字段一律「指针非 nil 才写」，不再用 `req.X > 0` / `req.X != ""`：
+	// 后者让 0/false/空串无法写入（售罄、禁用、清空 SEO 标题都是合法意图），
+	// 并且在 partial 调用（AI/MCP 默认 PATCH）里，请求体没带的字段会被静默清零。
+	// 这条规则对本函数管辖的全部模型生效，新增字段必须遵守（护栏见
+	// provider/archive_zero_guard_test.go）。
+	if newPost {
+		// 新建时 Request 的 nil = "没填"，要落成数据库默认值而不是零值。
+		// GORM 的 Save 写全列，DB 的 DEFAULT 不生效，所以默认值必须在这里显式给：
+		// product_type 缺省为 1（普通商品），stock 缺省为 9999999（不限量）。
+		draft.ProductType = config.ProductTypeNormal
+		draft.Stock = 9999999
+	}
 	if req.UpdateAll || req.ModuleId > 0 {
 		draft.ModuleId = req.ModuleId
 	}
-	if req.UpdateAll || req.ParentId > 0 {
-		draft.ParentId = req.ParentId
+	if req.ParentId != nil {
+		draft.ParentId = *req.ParentId
 	}
-	if req.UpdateAll || req.PlaceId > 0 {
-		draft.PlaceId = req.PlaceId
+	if req.PlaceId != nil {
+		draft.PlaceId = *req.PlaceId
 	}
-	if req.UpdateAll || req.Title != "" {
+	// 标题必填，空值永远不是合法写入值：UpdateAll 下漏传也不能把已有标题清空。
+	if req.Title != "" {
 		draft.Title = req.Title
 	}
-	if req.UpdateAll || req.SeoTitle != "" {
-		draft.SeoTitle = req.SeoTitle
+	if req.SeoTitle != nil {
+		draft.SeoTitle = *req.SeoTitle
 	}
-	if req.UpdateAll || req.Keywords != "" {
-		draft.Keywords = req.Keywords
+	if req.Keywords != nil {
+		draft.Keywords = *req.Keywords
 	}
-	if req.UpdateAll || req.Description != "" {
-		draft.Description = req.Description
+	if req.Description != nil {
+		draft.Description = *req.Description
 	}
 	if req.UpdateAll || req.CategoryId > 0 {
 		draft.CategoryId = req.CategoryId
 	}
-	if req.UpdateAll || len(req.Images) > 0 {
-		draft.Images = req.Images
-	} else if req.RemoveImage {
-		draft.Images = nil
+	if req.Images != nil {
+		draft.Images = *req.Images
 	}
-	if req.UpdateAll || req.Description != "" {
-		draft.Template = req.Template
+	if req.Template != nil {
+		draft.Template = *req.Template
 	}
-	if req.UpdateAll || req.Description != "" {
-		draft.CanonicalUrl = req.CanonicalUrl
+	if req.CanonicalUrl != nil {
+		draft.CanonicalUrl = *req.CanonicalUrl
 	}
 	oldFixedLink := ""
-	if req.UpdateAll || req.FixedLink != "" {
+	if req.FixedLink != nil {
 		oldFixedLink = draft.FixedLink
-		draft.FixedLink = req.FixedLink
+		draft.FixedLink = *req.FixedLink
 	}
-	if req.UpdateAll || req.Price > 0 {
-		draft.Price = req.Price
+	if req.Price != nil {
+		draft.Price = *req.Price
 	}
-	if req.UpdateAll || req.Stock > 0 {
-		draft.Stock = req.Stock
+	if req.Stock != nil {
+		draft.Stock = *req.Stock
 	}
-	if req.UpdateAll || req.ReadLevel > 0 {
-		draft.ReadLevel = req.ReadLevel
+	if req.ReadLevel != nil {
+		draft.ReadLevel = *req.ReadLevel
 	}
-	if req.UpdateAll || req.Password != "" {
-		draft.Password = req.Password
+	if req.Password != nil {
+		draft.Password = *req.Password
 	}
-	if req.UpdateAll || req.Sort > 0 {
-		draft.Sort = req.Sort
+	if req.Sort != nil {
+		draft.Sort = *req.Sort
 	}
-	if req.UserId > 0 {
-		draft.UserId = req.UserId
+	if req.UserId != nil {
+		draft.UserId = *req.UserId
 	}
-	if req.Views > 0 {
-		draft.Views = req.Views
+	if req.Views != nil {
+		draft.Views = *req.Views
 	}
 
-	if req.KeywordId > 0 {
-		draft.KeywordId = req.KeywordId
+	if req.KeywordId != nil {
+		draft.KeywordId = *req.KeywordId
 	}
 	if req.OriginUrl != "" {
 		if utf8.RuneCountInString(req.OriginUrl) > 190 {
@@ -801,8 +815,95 @@ func (w *Website) SaveArchive(req *request.Archive) (*model.Archive, error) {
 		}
 		draft.OriginTitle = req.OriginTitle
 	}
-	if req.OriginId > 0 {
-		draft.OriginId = req.OriginId
+	if req.OriginId != nil {
+		draft.OriginId = *req.OriginId
+	}
+	// 产品的字段
+	if req.OriginPrice != nil {
+		draft.OriginPrice = *req.OriginPrice
+	}
+	if req.CostPrice != nil {
+		draft.CostPrice = *req.CostPrice
+	}
+	if req.VideoUrl != nil {
+		draft.VideoUrl = *req.VideoUrl
+	}
+	if req.NeedLogistics != nil {
+		draft.NeedLogistics = *req.NeedLogistics
+	}
+	if req.IsFreeShipping != nil {
+		draft.IsFreeShipping = *req.IsFreeShipping
+	}
+	if req.OptionType != nil {
+		draft.OptionType = *req.OptionType
+	}
+	if req.Weight != nil {
+		draft.Weight = *req.Weight
+	}
+	if req.WeightUnit != nil {
+		draft.WeightUnit = *req.WeightUnit
+	}
+	if req.Length != nil {
+		draft.Length = *req.Length
+	}
+	if req.Width != nil {
+		draft.Width = *req.Width
+	}
+	if req.Height != nil {
+		draft.Height = *req.Height
+	}
+	if req.Volume != nil {
+		draft.Volume = *req.Volume
+	}
+	if req.LengthUnit != nil {
+		draft.LengthUnit = *req.LengthUnit
+	}
+	if req.MinQuantity != nil {
+		draft.MinQuantity = *req.MinQuantity
+	}
+	if req.MaxQuantity != nil {
+		draft.MaxQuantity = *req.MaxQuantity
+	}
+	if req.StepQuantity != nil {
+		draft.StepQuantity = *req.StepQuantity
+	}
+	if req.ProductType != nil {
+		draft.ProductType = *req.ProductType
+	}
+	if req.AllowOversold != nil {
+		draft.AllowOversold = *req.AllowOversold
+	}
+	// 定制商品的订单字段与 product_type 是绑定关系：非定制商品必须清空，
+	// 否则会留下上一次是定制商品时的表单定义（前台会继续要求填写）。
+	if req.OrderFields != nil {
+		if draft.ProductType == config.ProductTypeCustom {
+			draft.OrderFields = *req.OrderFields
+		} else {
+			draft.OrderFields = nil
+		}
+	} else if draft.ProductType != config.ProductTypeCustom {
+		draft.OrderFields = nil
+	}
+	if req.Brand != nil {
+		draft.Brand = *req.Brand
+	}
+	if req.HasPseudo != nil {
+		draft.HasPseudo = *req.HasPseudo
+	}
+	if req.SoldCount != nil {
+		draft.SoldCount = *req.SoldCount
+	}
+	if req.ReviewCount != nil {
+		draft.ReviewCount = *req.ReviewCount
+	}
+	if req.CommentCount != nil {
+		draft.CommentCount = *req.CommentCount
+	}
+	if req.FavoriteCount != nil {
+		draft.FavoriteCount = *req.FavoriteCount
+	}
+	if req.AverageScore != nil {
+		draft.AverageScore = *req.AverageScore
 	}
 
 	module = w.GetModuleFromCache(draft.ModuleId)
@@ -815,8 +916,10 @@ func (w *Website) SaveArchive(req *request.Archive) (*model.Archive, error) {
 		//extra
 		if len(module.Fields) > 0 {
 			for _, v := range module.Fields {
-				//先检查是否有必填而没有填写的
-				if v.Required && req.Extra[v.FieldName] == nil {
+				// 必填校验只在「后台整表单提交」时做。
+				// PATCH 调用（AI/MCP）通常只带一两个扩展字段，剩下的缺失是正常的，
+				// 在这里报必填会让「只改一个自定义字段」永远失败。
+				if v.Required && req.UpdateAll && req.Extra[v.FieldName] == nil {
 					return nil, errors.New(w.Tr("%sIsRequired", v.Name))
 				}
 				if req.Extra[v.FieldName] != nil {
@@ -871,7 +974,9 @@ func (w *Website) SaveArchive(req *request.Archive) (*model.Archive, error) {
 							}
 						}
 					}
-				} else {
+				} else if req.UpdateAll {
+					// 只有整表单提交才把「没出现的字段」当作用户清空；
+					// PATCH 时没传的扩展字段必须保持原值，否则改一个字段会抹掉其余自定义字段。
 					if v.Type == config.CustomFieldTypeNumber {
 						//只有这个类型的数据是数字，转成数字
 						extraFields[v.FieldName] = 0
@@ -883,7 +988,7 @@ func (w *Website) SaveArchive(req *request.Archive) (*model.Archive, error) {
 		}
 	}
 
-	if req.UpdateAll && len(req.Flags) == 0 {
+	if req.UpdateAll && (req.Flags == nil || len(*req.Flags) == 0) {
 		imgRe, _ := regexp.Compile(`(?i)<img.*?src=["'](.+?)["'].*?>`)
 		hasImage := imgRe.MatchString(req.Content)
 		if !hasImage {
@@ -892,7 +997,7 @@ func (w *Website) SaveArchive(req *request.Archive) (*model.Archive, error) {
 			hasImage = imgRe.MatchString(req.Content)
 		}
 		if hasImage {
-			req.Flags = append(req.Flags, "p")
+			req.Flags = library.Ptr([]string{"p"})
 		}
 	}
 
@@ -1025,27 +1130,35 @@ func (w *Website) SaveArchive(req *request.Archive) (*model.Archive, error) {
 			return nil, err
 		}
 	}
-	if req.UpdateAll || len(req.Flags) > 0 {
-		// 保存Flags
-		_ = w.SaveArchiveFlags(draft.Id, req.Flags)
+	if req.Flags != nil {
+		// 保存Flags；空数组表示清空标记
+		_ = w.SaveArchiveFlags(draft.Id, *req.Flags)
 	}
-	if req.UpdateAll || len(req.CategoryIds) > 0 {
+	if req.CategoryIds != nil {
 		// 保存分类ID
-		_ = w.SaveArchiveCategories(draft.Id, req.CategoryIds)
+		_ = w.SaveArchiveCategories(draft.Id, *req.CategoryIds)
 	}
 	if isReleased {
 		// 更新分类的文档计数
 		// 如果文档数量大于100万，则不自动计数
 		totalArchive := w.GetExplainCount("SELECT id FROM archives")
 		if totalArchive < 1000000 {
-			for _, catId := range req.CategoryIds {
+			for _, catId := range library.Deref(req.CategoryIds) {
 				w.UpdateCategoryArchiveCount(catId)
 			}
 		}
 	}
-	if req.UpdateAll || len(req.RelationIds) > 0 {
-		// 保存 Relations
-		_ = w.SaveArchiveRelations(draft.Id, req.RelationIds)
+	if req.UpdateAll || len(req.Options) > 0 {
+		// 产品保存sku
+		_ = w.SaveArchiveOptions(draft, req.Options, req.Skus)
+	}
+	if req.UpdateAll || len(req.WholesaleRules) > 0 {
+		// 保存wholesaleRules
+		_ = w.SaveArchiveWholesaleRules(draft.Id, req.WholesaleRules)
+	}
+	if req.RelationIds != nil {
+		// 保存 Relations；空数组表示清空关联
+		_ = w.SaveArchiveRelations(draft.Id, *req.RelationIds)
 	}
 	if req.Content != "" {
 		//检查有多少个material
@@ -1178,15 +1291,12 @@ func (w *Website) SaveArchive(req *request.Archive) (*model.Archive, error) {
 		}()
 	}
 
-	if req.UpdateAll || len(req.Tags) > 0 {
-		if len(req.Tags) > 0 {
-			_ = w.SaveTagData(draft.Id, req.Tags)
-		} else if req.RemoveTag {
-			_ = w.SaveTagData(draft.Id, nil)
-		} else if w.Content.MatchTag == 1 {
-			// 自动匹配标签
-			_ = w.AutoMatchTag(&draft.Archive)
-		}
+	if req.Tags != nil {
+		// 传了 tags（含空数组）就按传入值覆盖，空数组表示清空；没传则保持原标签。
+		_ = w.SaveTagData(draft.Id, *req.Tags)
+	} else if req.UpdateAll && w.Content.MatchTag == 1 {
+		// 自动匹配标签
+		_ = w.AutoMatchTag(&draft.Archive)
 	}
 
 	// 缓存清理
@@ -1255,6 +1365,15 @@ func (w *Website) SuccessReleaseArchive(archive *model.Archive, newPost bool) er
 	//w.Cache.CleanAll("archive-list")
 	//// 删除首页缓存
 	//w.DeleteCacheIndex()
+	// 如果启用了google推送
+	// 产品判定走 modules.kind，不再硬编码 id==2
+	if w.IsProductModule(archive.ModuleId) {
+		googlgeMerchantSetting := w.GetGoogleMerchantSetting()
+		if googlgeMerchantSetting.Open {
+			// 检查是否是首次推送
+			go w.StartSyncGoogleMerchantProducts(false, archive)
+		}
+	}
 
 	//新发布的文章，执行推送
 	if newPost {
@@ -1393,6 +1512,23 @@ func (w *Website) DeleteArchive(archive *model.Archive) error {
 func (w *Website) DeleteArchiveDraft(draft *model.ArchiveDraft) error {
 	if draft == nil {
 		return nil
+	}
+	w.DB.Unscoped().Delete(draft)
+	// 删除 文档内容
+	w.DB.Unscoped().Where("`id` = ?", draft.Id).Delete(&model.ArchiveData{})
+	// 删除 文档分类
+	w.DB.Unscoped().Where("`archive_id` = ?", draft.Id).Delete(&model.ArchiveCategory{})
+	// 删除 文档Flag
+	w.DB.Unscoped().Where("`archive_id` = ?", draft.Id).Delete(&model.ArchiveFlag{})
+	// 删除 文档TagData
+	w.DB.Unscoped().Where("`item_id` = ?", draft.Id).Delete(&model.TagData{})
+	// 删除商品属性。只在彻底删除时清：回收站/撤回发布只是在 archives 和
+	// archive_drafts 之间搬行、ID 不变，侧表跟着 ID 走，不用动。
+	w.DB.Unscoped().Where("`archive_id` = ?", draft.Id).Delete(&model.ArchiveProduct{})
+	// 删除模型数据
+	module := w.GetModuleFromCache(draft.ModuleId)
+	if module != nil {
+		w.DB.Exec("DELETE FROM ? WHERE `id` = ?", clause.Table{Name: module.TableName}, draft.Id)
 	}
 	// 正文、模块副表、分类、属性、标签、草稿行统一走 CleanArchiveRelations，
 	// 与「30 天自动清理」共用同一份逻辑，避免两边漏删不一致。
@@ -1668,7 +1804,7 @@ func (w *Website) GetCacheFixedLinks() map[string]int64 {
 	}
 
 	var archives []model.Archive
-	err = w.DB.Model(model.Archive{}).Where("`fixed_link` != ''").Select("fixed_link", "id").Scan(&archives).Error
+	err = w.DB.Model(model.Archive{}).Where("`fixed_link` != ''").Select("fixed_link", "id").Find(&archives).Error
 	if err != nil {
 		return nil
 	}
@@ -1895,13 +2031,15 @@ func (w *Website) UpgradeMultiCategory() {
 	}
 	var lastId int64 = 0
 	for {
-		var archives []*tinyArchive
-		w.DB.Model(&model.Archive{}).Where("`id` > ?", lastId).Order("id asc").Limit(1000).Scan(&archives)
-		if len(archives) == 0 {
+		// 变量别叫 archives：这里只需要 id/category_id，用 Scan 取窄结构没问题，
+		// 但同名变量会让「禁止 Scan 取 model.Archive」的护栏误报。
+		var tinyArchives []*tinyArchive
+		w.DB.Model(&model.Archive{}).Where("`id` > ?", lastId).Order("id asc").Limit(1000).Scan(&tinyArchives)
+		if len(tinyArchives) == 0 {
 			break
 		}
-		lastId = archives[len(archives)-1].Id
-		for _, arc := range archives {
+		lastId = tinyArchives[len(tinyArchives)-1].Id
+		for _, arc := range tinyArchives {
 			arcCategory := model.ArchiveCategory{
 				CategoryId: arc.CategoryId,
 				ArchiveId:  arc.Id,
@@ -2002,6 +2140,295 @@ func (w *Website) SaveArchiveRelations(archiveId int64, relationIds []int64) err
 	w.DB.Unscoped().Where("`archive_id` = ? and `relation_id` NOT IN (?)", archiveId, relationIds).Delete(&model.ArchiveRelation{})
 
 	return nil
+}
+
+func (w *Website) SaveArchiveOptions(archive *model.ArchiveDraft, options []*request.ArchiveOption, archiveSkus []*request.ArchiveSku) error {
+	archiveId := archive.Id
+	if len(options) == 0 || archive.OptionType == config.OptionTypeNone {
+		w.DB.Where("`archive_id` = ?", archiveId).Delete(&model.ArchiveOption{})
+		w.DB.Where("`archive_id` = ?", archiveId).Delete(&model.ArchiveOptionValue{})
+		return nil
+	}
+	if archive.OptionType == config.OptionTypePrice {
+		w.DB.Where("archive_id = ?", archiveId).Delete(&model.ArchiveSku{})
+	}
+	var valuesMap = map[string][]model.ArchiveOptionValue{}
+	var optionIds []int64
+	var optionStocks int64
+	for i, option := range options {
+		archiveOption := model.ArchiveOption{
+			ArchiveId:   archiveId,
+			IsMain:      option.IsMain,
+			Title:       option.Title,
+			IsAttribute: option.IsAttribute,
+			Sort:        uint(i + 1),
+		}
+		var existOption model.ArchiveOption
+		err := w.DB.Model(&model.ArchiveOption{}).Where("`archive_id` = ? and `title` = ?", archiveOption.ArchiveId, archiveOption.Title).Take(&existOption).Error
+		if err == nil {
+			existOption.IsMain = archiveOption.IsMain
+			existOption.Sort = archiveOption.Sort
+			existOption.IsAttribute = archiveOption.IsAttribute
+			w.DB.Model(&model.ArchiveOption{}).Where("`id` = ?", existOption.Id).Save(&existOption)
+			archiveOption.Id = existOption.Id
+		} else {
+			w.DB.Save(&archiveOption)
+		}
+		options[i].Id = archiveOption.Id
+		optionIds = append(optionIds, archiveOption.Id)
+		var optionValueIds []int64
+		for j, value := range option.Values {
+			if value.Stock > optionStocks {
+				optionStocks = value.Stock
+			}
+			archiveOptionValue := model.ArchiveOptionValue{
+				ArchiveId: archiveId,
+				OptionId:  archiveOption.Id,
+				Title:     value.Title,
+				Images:    value.Images,
+				Color:     value.Color,
+				Price:     value.Price,
+				Stock:     value.Stock,
+				IsDefault: value.IsDefault,
+				Sort:      uint(j + 1),
+			}
+			var existValue model.ArchiveOptionValue
+			err = w.DB.Model(&model.ArchiveOptionValue{}).Where("archive_id = ? and option_id = ? and title = ?", archiveOptionValue.ArchiveId, archiveOptionValue.OptionId, value.Title).Take(&existValue).Error
+			if err == nil {
+				existValue.Images = archiveOptionValue.Images
+				existValue.Color = archiveOptionValue.Color
+				existValue.Price = archiveOptionValue.Price
+				existValue.Stock = archiveOptionValue.Stock
+				existValue.Sort = archiveOptionValue.Sort
+				existValue.IsDefault = archiveOptionValue.IsDefault
+				w.DB.Model(&model.ArchiveOptionValue{}).Where("id = ?", existValue.Id).Save(&existValue)
+				archiveOptionValue.Id = existValue.Id
+			} else {
+				w.DB.Save(&archiveOptionValue)
+			}
+			options[i].Values[j].Id = archiveOptionValue.Id
+			optionValueIds = append(optionValueIds, archiveOptionValue.Id)
+			archiveOptionValue.OptionTitle = archiveOption.Title
+			valuesMap[archiveOption.Title] = append(valuesMap[archiveOption.Title], archiveOptionValue)
+		}
+		w.DB.Where("archive_id = ? and option_id = ? and id not in(?)", archiveId, archiveOption.Id, optionValueIds).Delete(&model.ArchiveOptionValue{})
+	}
+	w.DB.Where("archive_id = ? and id not in(?)", archiveId, optionIds).Delete(&model.ArchiveOption{})
+	// 写入sku
+	var skuIds []int64
+	var minPrice int64
+	var totalStock int64
+	for _, archiveSku := range archiveSkus {
+		var skuValues []model.ArchiveOptionValue
+		var skuSymbols []string
+		var valueNames []string
+		for _, opt := range archiveSku.Values {
+			if opt.OptionTitle == "" && opt.OptionId > 0 {
+				for _, tmp := range options {
+					if tmp.Id == opt.OptionId {
+						opt.OptionTitle = tmp.Title
+						break
+					}
+				}
+			}
+			var valueItem model.ArchiveOptionValue
+			subValues, ok := valuesMap[opt.OptionTitle]
+			if ok {
+				for j := range subValues {
+					if subValues[j].Title == opt.Title {
+						valueItem = subValues[j]
+						skuValues = append(skuValues, valueItem)
+						break
+					}
+				}
+			} else {
+				// 出错？
+				log.Printf("获取不到Option ？ opt = %v", opt)
+			}
+			skuSymbols = append(skuSymbols, strconv.FormatInt(valueItem.Id, 10))
+			tmpName := library.GetPinyin(valueItem.Title, w.Content.UrlTokenType == config.UrlTokenTypeSort)
+			if len(tmpName) > 20 {
+				tmpName = tmpName[:20]
+			}
+			valueNames = append(valueNames, tmpName)
+			// if archiveSku.Logo == "" && valuesMap[opt.Title].Logo != "" {
+			// 	archiveSku.Logo = valuesMap[opt.Title].Logo
+			// }
+		}
+		symbol := strings.Join(skuSymbols, "-")
+		if archiveSku.Sku == "" {
+			archiveSku.Sku = symbol
+		}
+		urlToken := strings.Join(valueNames, " ")
+		if len(urlToken) > 150 {
+			urlToken = urlToken[:150]
+		}
+		archiveSku.UrlToken = archive.UrlToken + "-" + urlToken
+		if len(archiveSku.UrlToken) > 190 {
+			urlTokenLen := len(urlToken)
+			archiveSku.UrlToken = archive.UrlToken[:188-urlTokenLen] + urlToken
+		}
+		totalStock += archiveSku.Stock
+		if minPrice == 0 || (archiveSku.Price > 0 && archiveSku.Price < minPrice) {
+			minPrice = archiveSku.Price
+		}
+		sku := model.ArchiveSku{
+			Id:          archiveSku.Id,
+			ArchiveId:   archiveId,
+			Title:       archiveSku.Title,
+			UrlToken:    archiveSku.UrlToken,
+			Symbol:      symbol,
+			Sku:         archiveSku.Sku,
+			Barcode:     archiveSku.Barcode,
+			HsCode:      archiveSku.HsCode,
+			Images:      archiveSku.Images,
+			Stock:       archiveSku.Stock,
+			Price:       archiveSku.Price,
+			OriginPrice: archiveSku.OriginPrice,
+			CostPrice:   archiveSku.CostPrice,
+			Weight:      archiveSku.Weight,
+			WeightUnit:  archiveSku.WeightUnit,
+			Length:      archiveSku.Length,
+			Width:       archiveSku.Width,
+			Height:      archiveSku.Height,
+			Volume:      archiveSku.Volume,
+			LengthUnit:  archiveSku.LengthUnit,
+			Values:      skuValues,
+			Status:      archiveSku.Status,
+		}
+		if sku.Id > 0 {
+			var exist model.ArchiveSku
+			w.DB.Where("archive_id = ? AND id = ?", archiveId, sku.Id).First(&exist)
+			if exist.Id > 0 {
+				exist.Title = sku.Title
+				exist.Symbol = sku.Symbol
+				exist.Sku = sku.Sku
+				exist.Barcode = sku.Barcode
+				exist.HsCode = sku.HsCode
+				exist.Images = sku.Images
+				exist.Stock = sku.Stock
+				exist.Price = sku.Price
+				exist.CostPrice = sku.CostPrice
+				exist.OriginPrice = sku.OriginPrice
+				exist.Weight = sku.Weight
+				exist.WeightUnit = sku.WeightUnit
+				exist.Length = sku.Length
+				exist.Width = sku.Width
+				exist.Height = sku.Height
+				exist.Volume = sku.Volume
+				exist.LengthUnit = sku.LengthUnit
+				exist.Values = skuValues
+				exist.Status = sku.Status
+				w.DB.Model(&model.ArchiveSku{}).Where("id = ?", exist.Id).Save(&exist)
+			} else {
+				sku.Id = 0
+				w.DB.Save(&sku)
+			}
+		} else {
+			w.DB.Save(&sku)
+		}
+		skuIds = append(skuIds, sku.Id)
+	}
+	if archive.OptionType == config.OptionTypePrice {
+		minPrice = archive.Price
+		totalStock = archive.Stock
+		if optionStocks > totalStock {
+			totalStock = optionStocks
+		}
+	}
+	w.DB.Model(&model.Archive{}).Where("id = ?", archiveId).UpdateColumns(map[string]interface{}{
+		"stock": totalStock,
+		"price": minPrice,
+	})
+	w.DB.Where("archive_id = ? and id not in (?)", archiveId, skuIds).Delete(&model.ArchiveSku{})
+
+	return nil
+}
+
+func (w *Website) SaveArchiveWholesaleRules(archiveId int64, rules []*request.WholesaleRule) error {
+	if len(rules) == 0 {
+		w.DB.Where("archive_id = ?", archiveId).Delete(&model.WholesaleRule{})
+		return nil
+	}
+	var ruleIds []int64
+	for _, rule := range rules {
+		var exist model.WholesaleRule
+		if rule.Id > 0 {
+			w.DB.Where("id = ?", rule.Id).First(&exist)
+			if exist.Id > 0 && exist.ArchiveId != archiveId {
+				// 排除这个id
+				exist = model.WholesaleRule{}
+			}
+		}
+		exist.ArchiveId = archiveId
+		exist.MinQuantity = rule.MinQuantity
+		exist.MaxQuantity = rule.MaxQuantity
+		exist.DiscountRate = rule.DiscountRate
+
+		w.DB.Save(&exist)
+		ruleIds = append(ruleIds, exist.Id)
+	}
+	w.DB.Where("archive_id = ?", archiveId).Where("id not in (?)", ruleIds).Delete(&model.WholesaleRule{})
+
+	return nil
+}
+
+func (w *Website) GetArchiveOptions(archiveId int64) ([]*model.ArchiveOption, error) {
+	var options []*model.ArchiveOption
+	if err := w.DB.Where("archive_id = ?", archiveId).Find(&options).Error; err != nil {
+		return nil, err
+	}
+	var values []model.ArchiveOptionValue
+	if err := w.DB.Where("archive_id = ?", archiveId).Find(&values).Error; err != nil {
+		return nil, err
+	}
+	for _, option := range options {
+		for _, value := range values {
+			if option.Id == value.OptionId {
+				value.Thumb = value.GetThumb(w.PluginStorage.StorageUrl, w.Content.DefaultThumb)
+				option.Values = append(option.Values, value)
+			}
+		}
+	}
+
+	return options, nil
+}
+
+func (w *Website) GetArchiveOption(archiveId int64, optionId int64) (*model.ArchiveOption, error) {
+	var option model.ArchiveOption
+	if err := w.DB.Where("archive_id = ? AND id = ?", archiveId, optionId).First(&option).Error; err != nil {
+		return nil, err
+	}
+	return &option, nil
+}
+
+func (w *Website) GetArchiveOptionValue(archiveId int64, optionValueId int64) (*model.ArchiveOptionValue, error) {
+	var optionValue model.ArchiveOptionValue
+	if err := w.DB.Where("archive_id = ? AND id = ?", archiveId, optionValueId).First(&optionValue).Error; err != nil {
+		return nil, err
+	}
+	return &optionValue, nil
+}
+
+func (w *Website) GetArchiveSkus(archiveId int64) ([]*model.ArchiveSku, error) {
+	var skus []*model.ArchiveSku
+	if err := w.DB.Where("archive_id = ?", archiveId).Find(&skus).Error; err != nil {
+		return nil, err
+	}
+	for _, sku := range skus {
+		sku.Thumb = sku.GetThumb(w.PluginStorage.StorageUrl, w.Content.DefaultThumb)
+	}
+
+	return skus, nil
+}
+
+func (w *Website) GetArchiveWholesaleRules(archiveId int64) ([]*model.WholesaleRule, error) {
+	var rules []*model.WholesaleRule
+	if err := w.DB.Where("archive_id = ?", archiveId).Find(&rules).Error; err != nil {
+		return nil, err
+	}
+
+	return rules, nil
 }
 
 type QuickImportArchive struct {
@@ -2361,8 +2788,8 @@ func (qia *QuickImportArchive) startZip(file multipart.File) error {
 					tmpCategory, _ = qia.w.SaveCategory(&request.Category{
 						Title:    categoryTitle,
 						ModuleId: category.ModuleId,
-						ParentId: category.Id,
-						Status:   1,
+						ParentId: library.Ptr(category.Id),
+						Status:   library.Ptr(uint(1)),
 						Type:     config.CategoryTypeArchive,
 					})
 				}
@@ -2737,9 +3164,9 @@ func (qia *QuickImportArchive) startExcel(file io.Reader) error {
 					}
 					tmpCategory, err = qia.w.SaveCategory(&request.Category{
 						Title:    categoryTitle,
-						ParentId: parentId,
+						ParentId: library.Ptr(parentId),
 						ModuleId: moduleId,
-						Status:   1,
+						Status:   library.Ptr(uint(1)),
 						Type:     config.CategoryTypeArchive,
 					})
 				}
@@ -3221,7 +3648,7 @@ func (w *Website) applyArchiveFrontmatter(archive *model.ArchiveDraft, fm map[st
 			tmpCategory, _ := w.SaveCategory(&request.Category{
 				Title:    categoryTitle,
 				ModuleId: archive.ModuleId,
-				Status:   1,
+				Status:   library.Ptr(uint(1)),
 				Type:     config.CategoryTypeArchive,
 			})
 			if tmpCategory != nil {
@@ -3230,4 +3657,61 @@ func (w *Website) applyArchiveFrontmatter(archive *model.ArchiveDraft, fm map[st
 		}
 	}
 	// 不支持 extra
+}
+
+func (w *Website) GetArchiveSkuById(archiveId, skuId int64) (*model.ArchiveSku, error) {
+	var sku model.ArchiveSku
+	err := w.DB.Where("id = ?", skuId).First(&sku).Error
+	if err != nil {
+		return nil, err
+	}
+	if archiveId != sku.ArchiveId {
+		return nil, errors.New("sku not found")
+	}
+	sku.Thumb = sku.GetThumb(w.PluginStorage.StorageUrl, w.Content.DefaultThumb)
+
+	return &sku, nil
+}
+
+func (w *Website) GetArchiveSkuByUrlToken(urlToken string) (*model.ArchiveSku, error) {
+	var sku model.ArchiveSku
+	err := w.DB.Where("url_token = ?", urlToken).First(&sku).Error
+	if err != nil {
+		return nil, err
+	}
+	sku.Thumb = sku.GetThumb(w.PluginStorage.StorageUrl, w.Content.DefaultThumb)
+
+	return &sku, nil
+}
+
+func (w *Website) GetDefaultSku(options []*model.ArchiveOption) (*model.ArchiveSku, error) {
+	var sku model.ArchiveSku
+	var valueIds []string
+	for _, opt := range options {
+		var tmpId int64
+		for _, val := range opt.Values {
+			if val.IsDefault {
+				tmpId = val.Id
+				break
+			}
+		}
+		if tmpId == 0 && len(opt.Values) > 0 {
+			tmpId = opt.Values[0].Id
+		}
+		valueIds = append(valueIds, strconv.FormatInt(tmpId, 10))
+	}
+	symbol := strings.Join(valueIds, "-")
+	err := w.DB.Where("symbol = ?", symbol).First(&sku).Error
+	if err != nil {
+		return nil, err
+	}
+	sku.Thumb = sku.GetThumb(w.PluginStorage.StorageUrl, w.Content.DefaultThumb)
+
+	return &sku, nil
+}
+
+func (w *Website) GetArchiveSkuList(archiveId int64) []*model.ArchiveSku {
+	var skus []*model.ArchiveSku
+	w.DB.Where("archive_id = ?", archiveId).Find(&skus)
+	return skus
 }

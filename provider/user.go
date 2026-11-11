@@ -117,66 +117,60 @@ func (w *Website) GetUsersInfoByIds(userIds []uint) []*model.User {
 func (w *Website) SaveUserInfo(req *request.UserRequest) (*model.User, error) {
 	var user *model.User
 	var err error
+	// 用户名唯一性校验：user_name 是「按用户名登录」的凭据，重名会串号。
+	// 创建时重名直接拒绝（调用方自己填的名字，改一下就行）；
+	// 第三方自动注册不经过这里，那条路径用 uniqueUserName 加后缀而不是拒绝。
+	req.UserName = strings.TrimSpace(req.UserName)
 	if req.Id > 0 {
 		user, err = w.GetUserInfoById(req.Id)
 		if err != nil {
 			// 用户不存在
 			return nil, err
 		}
+		// 改名也不能撞上别人（与 UpdateUserInfo 同一口径）。
+		if req.UserName != "" && w.userNameTaken(req.UserName, user.Id) {
+			return nil, errors.New(w.Tr("TheUsernameHasBeenRegistered"))
+		}
 	} else {
+		if req.UserName == "" {
+			return nil, errors.New(w.Tr("PleaseEnterUsername"))
+		}
+		if w.userNameTaken(req.UserName, 0) {
+			return nil, errors.New(w.Tr("TheUsernameHasBeenRegistered"))
+		}
 		user = &model.User{}
 	}
+	oldGroupId := user.GroupId
 
+	// 指针字段的归一：nil 表示调用方没提这个字段，保持库里原值；
+	// UpdateAll（表单全量提交）时才把「没提」当成「清空」。
+	// 不能再用 `req.X != ""` / `req.X > 0` 判断——那会把「显式传空/传 0」也当成没传。
 	if req.UpdateAll || req.UserName != "" {
 		user.UserName = req.UserName
 	}
-	if req.UpdateAll || req.RealName != "" {
-		user.RealName = req.RealName
+	library.Assign(&user.RealName, req.RealName, req.UpdateAll)
+	library.Assign(&user.FirstName, req.FirstName, req.UpdateAll)
+	library.Assign(&user.LastName, req.LastName, req.UpdateAll)
+	library.Assign(&user.Introduce, req.Introduce, req.UpdateAll)
+	library.Assign(&user.Phone, req.Phone, req.UpdateAll)
+	library.Assign(&user.Email, req.Email, req.UpdateAll)
+	library.Assign(&user.InviteCode, req.InviteCode, req.UpdateAll)
+	library.Assign(&user.Birthday, req.Birthday, req.UpdateAll)
+	if req.AvatarURL != nil {
+		user.AvatarURL = config.StripStorageUrl(*req.AvatarURL, w.PluginStorage.StorageUrl)
+	} else if req.UpdateAll {
+		user.AvatarURL = ""
 	}
-	if req.UpdateAll || req.FirstName != "" {
-		user.FirstName = req.FirstName
-	}
-	if req.UpdateAll || req.LastName != "" {
-		user.LastName = req.LastName
-	}
-	if req.UpdateAll || req.Birthday > 0 {
-		user.Birthday = req.Birthday
-	}
-	if req.UpdateAll || req.AvatarURL != "" {
-		user.AvatarURL = config.StripStorageUrl(req.AvatarURL, w.PluginStorage.StorageUrl)
-	}
-	if req.UpdateAll || req.Introduce != "" {
-		user.Introduce = req.Introduce
-	}
-	if req.UpdateAll || req.Phone != "" {
-		user.Phone = req.Phone
-	}
-	if req.UpdateAll || req.Email != "" {
-		user.Email = req.Email
-	}
-	if req.UpdateAll || req.IsRetailer > 0 {
-		user.IsRetailer = req.IsRetailer
-	}
-	if req.UpdateAll || req.ParentId > 0 {
-		user.ParentId = req.ParentId
-	}
-	if req.UpdateAll || req.InviteCode != "" {
-		user.InviteCode = req.InviteCode
-	}
-	if req.UpdateAll || req.GroupId > 0 {
-		user.GroupId = req.GroupId
-		if user.GroupId == 0 {
-			user.GroupId = w.PluginUser.DefaultGroupId
-		}
-	}
-	if req.UpdateAll || req.ExpireTime > 0 {
-		user.ExpireTime = req.ExpireTime
-	}
-	if req.UpdateAll || req.Status > 0 {
-		user.Status = req.Status
-		if user.GroupId == 0 {
-			user.GroupId = w.PluginUser.DefaultGroupId
-		}
+	library.Assign(&user.IsRetailer, req.IsRetailer, req.UpdateAll)
+	library.Assign(&user.ParentId, req.ParentId, req.UpdateAll)
+	library.Assign(&user.ExpireTime, req.ExpireTime, req.UpdateAll)
+	// Status 的 0=待审核、-1=禁用 都是合法业务值，必须走指针才能写进去。
+	library.Assign(&user.Status, req.Status, req.UpdateAll)
+	library.Assign(&user.GroupId, req.GroupId, req.UpdateAll)
+	// 用户组为空时落到默认组（原来是只挂在 GroupId>0 / Status>0 分支里，
+	// 现在统一在末尾校正，语义不变但不会再漏）。
+	if user.GroupId == 0 {
+		user.GroupId = w.PluginUser.DefaultGroupId
 	}
 
 	req.Password = strings.TrimSpace(req.Password)
@@ -189,10 +183,13 @@ func (w *Website) SaveUserInfo(req *request.UserRequest) (*model.User, error) {
 		w.ProcessNewUser(user)
 	}
 	// 判断订阅
-	subscriber, err2 := w.GetSubscriberByEmail(req.Email)
-	if err2 == nil {
-		// 添加订阅
-		w.DB.Model(&model.Subscriber{}).Where("id = ?", subscriber.Id).UpdateColumn("user_id", int64(user.Id))
+	// 用合并后的 user.Email 而不是 req.Email：PATCH 时 req.Email 是 nil。
+	if user.Email != "" {
+		subscriber, err2 := w.GetSubscriberByEmail(user.Email)
+		if err2 == nil {
+			// 添加订阅
+			w.DB.Model(&model.Subscriber{}).Where("id = ?", subscriber.Id).UpdateColumn("user_id", int64(user.Id))
+		}
 	}
 	//extra
 	extraFields := map[string]interface{}{}
@@ -248,11 +245,15 @@ func (w *Website) SaveUserInfo(req *request.UserRequest) (*model.User, error) {
 					}
 				}
 			} else {
-				if v.Type == config.CustomFieldTypeNumber {
-					//只有这个类型的数据是数字，转成数字
-					extraFields[v.FieldName] = 0
-				} else {
-					extraFields[v.FieldName] = ""
+				// 自定义字段没出现在请求里：只有全量提交才按空值补齐。
+				// PATCH（AI/MCP 改一个手机号）不能顺手把其它自定义字段清空。
+				if req.UpdateAll {
+					if v.Type == config.CustomFieldTypeNumber {
+						//只有这个类型的数据是数字，转成数字
+						extraFields[v.FieldName] = 0
+					} else {
+						extraFields[v.FieldName] = ""
+					}
 				}
 			}
 		}
@@ -263,7 +264,86 @@ func (w *Website) SaveUserInfo(req *request.UserRequest) (*model.User, error) {
 		//入库
 		w.DB.Model(model.User{}).Where("`id` = ?", user.Id).Updates(extraFields)
 	}
+
+	// 发送用户组变更邮件
+	if oldGroupId > 0 && oldGroupId != user.GroupId {
+		oldGroup, err := w.GetUserGroupInfo(oldGroupId)
+		if err == nil {
+			newGroup, _ := w.GetUserGroupInfo(user.GroupId)
+			user.Group = newGroup
+			w.SendUserGroupChangeEmail(user, oldGroup)
+		}
+	}
+
 	return user, err
+}
+
+// ── 用户名唯一性（2026-10-27）────────────────────────────────────────────
+//
+// user_name 不只是展示名：LoginViaPassword 有一条「按 user_name 登录」的分支，
+// 两个同名账号会让人登进别人那里。所以：
+//   - 后台/AI 创建（SaveUserInfo，用户名由调用方自选）→ 重名直接拒绝，不改写；
+//   - 第三方自动注册（Google/公众号/小程序，用户名取自平台昵称，用户无法自选）
+//     → 先查重，重复时追加数字后缀：张三、张三2、张三3……
+//
+// 之所以两条路径策略不同：前者用户能改，报错让他换一个就行；后者他改不了昵称，
+// 拒绝注册等于把第三方登录整个堵死。
+const (
+	// userNameMaxLen 与 model.User.UserName 的 varchar(64) 对齐。
+	// 后缀最多 4 位（2..9999），所以 base 压到 60 个字符即可保证总长不越界。
+	userNameMaxLen = 60
+	// defaultThirdPartyUserName 是平台没给昵称时的兜底名。
+	// 允许空用户名会让「按用户名登录」命中任意一条空名记录，必须堵掉。
+	defaultThirdPartyUserName = "用户"
+)
+
+// truncateRunes 按字符（不是字节）截断，避免切裂多字节字符。
+func truncateRunes(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	return string(r[:n])
+}
+
+// nextUniqueUserName 生成不冲突的用户名。taken 判定「该名字已被占用」。
+// 抽成纯函数是为了让后缀规则能脱库测试。
+func nextUniqueUserName(base string, taken func(string) bool) string {
+	base = strings.TrimSpace(base)
+	if base == "" {
+		base = defaultThirdPartyUserName
+	}
+	base = truncateRunes(base, userNameMaxLen)
+	if !taken(base) {
+		return base
+	}
+	for i := 2; i <= 9999; i++ {
+		candidate := base + strconv.Itoa(i)
+		if !taken(candidate) {
+			return candidate
+		}
+	}
+	// 极端兜底：base 的 9999 个后缀都被占。纳秒时间戳定长 19 位，
+	// 先把 base 压到 41 字符再拼，保证总长不超过 60。
+	return truncateRunes(base, userNameMaxLen-19) + strconv.FormatInt(time.Now().UnixNano(), 10)
+}
+
+// userNameTaken 判断用户名是否已被占用；excludeId > 0 时排除自身（更新场景）。
+func (w *Website) userNameTaken(userName string, excludeId uint) bool {
+	tx := w.DB.Model(&model.User{}).Where("`user_name` = ?", userName)
+	if excludeId > 0 {
+		tx = tx.Where("`id` <> ?", excludeId)
+	}
+	var count int64
+	tx.Count(&count)
+	return count > 0
+}
+
+// uniqueUserName 供第三方自动注册使用：重名时加数字后缀而不是拒绝。
+func (w *Website) uniqueUserName(base string, excludeId uint) string {
+	return nextUniqueUserName(base, func(candidate string) bool {
+		return w.userNameTaken(candidate, excludeId)
+	})
 }
 
 func (w *Website) DeleteUserInfo(userId uint) error {
@@ -355,27 +435,45 @@ func (w *Website) GetUserGroupInfoByLevel(level int) (*model.UserGroup, error) {
 }
 
 func (w *Website) SaveUserGroupInfo(req *request.UserGroupRequest) (*model.UserGroup, error) {
-	var group = model.UserGroup{
-		Title:       req.Title,
-		Description: req.Description,
-		Level:       req.Level,
-		Price:       req.Price,
-		Status:      1,
-		Setting:     req.Setting,
-	}
+	// 这里原来是「用请求字段拼一个新对象再 Save」，GORM 的 Save 会写全列，
+	// 于是没传的 Level/Price/Description 被清成零值，Status 更是硬编码成 1
+	// ——用户组只要保存过一次就再也停不掉。改成先读库再按指针合并。
+	var group *model.UserGroup
 	if req.Id > 0 {
-		_, err := w.GetUserGroupInfo(req.Id)
+		exist, err := w.GetUserGroupInfo(req.Id)
 		if err != nil {
 			// 不存在
 			return nil, err
 		}
-		group.Id = req.Id
+		group = exist
+	} else {
+		group = &model.UserGroup{Status: 1}
 	}
-	if err := w.DB.Save(&group).Error; err != nil {
+	library.Assign(&group.Title, req.Title, req.UpdateAll)
+	library.Assign(&group.Description, req.Description, req.UpdateAll)
+	if req.Level != nil {
+		group.Level = *req.Level
+	} else if req.UpdateAll {
+		group.Level = 0
+	}
+	if req.Price != nil {
+		group.Price = *req.Price
+	} else if req.UpdateAll {
+		group.Price = 0
+	}
+	// Status 的 0 是「停用」，是合法值，不能用 >0 判断。
+	if req.Status != nil {
+		group.Status = *req.Status
+	}
+	if req.Setting != nil {
+		group.Setting = *req.Setting
+	}
+
+	if err := w.DB.Save(group).Error; err != nil {
 		return nil, err
 	}
 
-	return &group, nil
+	return group, nil
 }
 
 func (w *Website) GetUserWechatByOpenid(openid string) (*model.UserWechat, error) {
@@ -597,7 +695,8 @@ func (w *Website) LoginViaWeapp(req *request.ApiLoginRequest) (*model.User, erro
 	if userErr != nil {
 		//系统没记录，则插入一条记录
 		user = &model.User{
-			UserName:      wecahtUserInfo.Nickname,
+			// 昵称来自微信，用户改不了；撞名时加数字后缀而不是拒绝注册。
+			UserName:      w.uniqueUserName(wecahtUserInfo.Nickname, 0),
 			AvatarURL:     wecahtUserInfo.Avatar,
 			ParentId:      req.InviteId,
 			GroupId:       w.PluginUser.DefaultGroupId,
@@ -638,7 +737,7 @@ func (w *Website) LoginViaWeapp(req *request.ApiLoginRequest) (*model.User, erro
 		}
 		//更新信息
 		if wecahtUserInfo.Nickname != "" && (userWechat.Nickname != wecahtUserInfo.Nickname || userWechat.AvatarURL != wecahtUserInfo.Avatar) {
-			user.UserName = wecahtUserInfo.Nickname
+			user.UserName = w.uniqueUserName(wecahtUserInfo.Nickname, user.Id)
 			user.AvatarURL = wecahtUserInfo.Avatar
 			err = w.DB.Save(user).Error
 			if err != nil {
@@ -673,7 +772,8 @@ func (w *Website) LoginViaWechat(req *request.ApiLoginRequest) (*model.User, err
 	var user *model.User
 	if userWechat.UserId == 0 {
 		user = &model.User{
-			UserName:      userWechat.Nickname,
+			// 昵称来自公众号，用户改不了；撞名时加数字后缀而不是拒绝注册。
+			UserName:      w.uniqueUserName(userWechat.Nickname, 0),
 			AvatarURL:     userWechat.AvatarURL,
 			GroupId:       w.PluginUser.DefaultGroupId,
 			Password:      "",
@@ -739,7 +839,7 @@ func (w *Website) LoginViaGoogle(req *request.ApiLoginRequest) (*model.User, err
 		user = &model.User{
 			Email:         googleUser.Email,
 			EmailVerified: googleUser.EmailVerified,
-			UserName:      googleUser.Name,
+			UserName:      w.uniqueUserName(googleUser.Name, 0),
 			AvatarURL:     googleUser.Picture,
 			GoogleId:      googleUser.Sub,
 			GroupId:       w.PluginUser.DefaultGroupId,
@@ -754,7 +854,10 @@ func (w *Website) LoginViaGoogle(req *request.ApiLoginRequest) (*model.User, err
 		w.ProcessNewUser(user)
 	} else {
 		user.GoogleId = googleUser.Sub
-		user.UserName = googleUser.Name
+		if googleUser.Name != "" {
+			// 老用户同步昵称时同样可能撞上别人的名字，排除自身后加后缀。
+			user.UserName = w.uniqueUserName(googleUser.Name, user.Id)
+		}
 		if googleUser.GivenName != "" {
 			user.RealName = googleUser.GivenName + " " + googleUser.FamilyName
 		}
@@ -858,15 +961,31 @@ func (w *Website) GetRetailerMembers(retailerId uint, page, pageSize int) ([]*mo
 }
 
 func (w *Website) UpdateUserRealName(userId uint, realName string) error {
-	err := w.DB.Model(&model.User{}).Where("`id` = ?", userId).UpdateColumn("real_name", realName).Error
-
-	return err
+	// 同 SetRetailerInfo：影响 0 行要区分"值没变"和"用户不存在"。
+	res := w.DB.Model(&model.User{}).Where("`id` = ?", userId).UpdateColumn("real_name", realName)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		if _, err := w.GetUserInfoById(userId); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (w *Website) SetRetailerInfo(userId uint, isRetailer int) error {
-	err := w.DB.Model(&model.User{}).Where("`id` = ?", userId).UpdateColumn("is_retailer", isRetailer).Error
-
-	return err
+	// 用户不存在时 UpdateColumn 影响 0 行且不报错，端点却回"配置已更新"。
+	res := w.DB.Model(&model.User{}).Where("`id` = ?", userId).UpdateColumn("is_retailer", isRetailer)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		if _, err := w.GetUserInfoById(userId); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (w *Website) UpdateUserInfo(userId uint, req *request.UserRequest) error {
@@ -888,43 +1007,49 @@ func (w *Website) UpdateUserInfo(userId uint, req *request.UserRequest) error {
 	// if user.Email != "" {
 	// 	req.Email = ""
 	// }
-	if req.Phone != "" {
-		// if !w.VerifyCellphoneFormat(req.Phone) {
+	if req.Phone != nil {
+		// if !w.VerifyCellphoneFormat(*req.Phone) {
 		// 	return errors.New(w.Tr("IncorrectMobilePhoneNumber"))
 		// }
-		exist, err := w.GetUserInfoByPhone(req.Phone)
-		if err == nil && exist.Id != user.Id {
-			return errors.New(w.Tr("TheMobilePhoneNumberHasBeenRegistered"))
+		if *req.Phone != "" {
+			exist, err := w.GetUserInfoByPhone(*req.Phone)
+			if err == nil && exist.Id != user.Id {
+				return errors.New(w.Tr("TheMobilePhoneNumberHasBeenRegistered"))
+			}
 		}
-		user.Phone = req.Phone
+		user.Phone = *req.Phone
 	}
-	if req.Email != "" {
-		if !w.VerifyEmailFormat(req.Email) {
-			return errors.New(w.Tr("IncorrectEmail"))
+	if req.Email != nil {
+		if *req.Email != "" {
+			if !w.VerifyEmailFormat(*req.Email) {
+				return errors.New(w.Tr("IncorrectEmail"))
+			}
+			exist, err := w.GetUserInfoByEmail(*req.Email)
+			if err == nil && exist.Id != user.Id {
+				return errors.New(w.Tr("TheEmailHasBeenRegistered"))
+			}
 		}
-		exist, err := w.GetUserInfoByEmail(req.Email)
-		if err == nil && exist.Id != user.Id {
-			return errors.New(w.Tr("TheEmailHasBeenRegistered"))
-		}
-		user.Email = req.Email
+		user.Email = *req.Email
 	}
 	if req.UserName != "" {
 		user.UserName = req.UserName
 	}
-	if req.RealName != "" {
-		user.RealName = req.RealName
+	if req.RealName != nil {
+		user.RealName = *req.RealName
 	}
-	if req.FirstName != "" {
-		user.FirstName = req.FirstName
+	if req.FirstName != nil {
+		user.FirstName = *req.FirstName
 	}
-	if req.LastName != "" {
-		user.LastName = req.LastName
+	if req.LastName != nil {
+		user.LastName = *req.LastName
 	}
-	if req.FirstName != "" && req.LastName != "" && user.RealName == "" {
-		user.RealName = req.FirstName + " " + req.LastName
+	// 姓名是「姓 + 名」拼出来的展示名：只有当调用方真的传了这两项、
+	// 且拼完后真实姓名仍为空时才补，不能因为 PATCH 没传就把已有的 RealName 冲掉。
+	if req.FirstName != nil && req.LastName != nil && user.RealName == "" {
+		user.RealName = *req.FirstName + " " + *req.LastName
 	}
-	if req.Introduce != "" {
-		user.Introduce = req.Introduce
+	if req.Introduce != nil {
+		user.Introduce = *req.Introduce
 	}
 	if user.GroupId == 0 {
 		user.GroupId = w.PluginUser.DefaultGroupId
@@ -1129,6 +1254,13 @@ func (w *Website) UploadUserAvatar(userId uint, file multipart.File) (avatarUrl 
 // 处理新用户
 func (w *Website) ProcessNewUser(user *model.User) {
 	// 记录日志
+	_ = w.ShopCountLog.Write(&request.LogStatisticRequest{Action: request.LogActionUser, Type: request.LogTypeUserCreate, Id: int64(user.Id)})
+
+	// 同步到brevo
+	client := w.BrevoClient("")
+	if client != nil {
+		_ = client.CreateContact(user)
+	}
 	// 新用户欢迎邮件
 	w.SendWelcomeEmail(user)
 }

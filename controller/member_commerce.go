@@ -32,7 +32,7 @@ type memberCategoryOption struct {
 func memberCommercePage(ctx iris.Context, currentSite *provider.Website, route string, userInfo *model.User) {
 	switch route {
 	case "cart":
-		carts, total := currentSite.GetCartList(userInfo.Id)
+		carts, total := currentSite.GetCommerceCartList(userInfo.Id)
 		ctx.ViewData("carts", carts)
 		ctx.ViewData("cartTotal", total)
 		ctx.ViewData("cartCount", len(carts))

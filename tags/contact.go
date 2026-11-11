@@ -3,6 +3,7 @@ package tags
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 
 	"github.com/flosch/pongo2/v6"
 	"kandaoni.com/anqicms/config"
@@ -73,6 +74,18 @@ func (node *tagContactNode) Execute(ctx *pongo2.ExecutionContext, writer pongo2.
 			content = currentSite.Contact.Youtube
 		case "Qrcode":
 			content = config.JoinStorageUrl(currentSite.PluginStorage.StorageUrl, currentSite.Contact.Qrcode)
+		case "ShopName":
+			content = currentSite.Contact.ShopName
+		case "ShopLogo":
+			content = config.JoinStorageUrl(currentSite.PluginStorage.StorageUrl, currentSite.Contact.ShopLogo)
+		case "ShopDescription":
+			content = currentSite.Contact.ShopDescription
+		case "BusinessHours":
+			content = currentSite.Contact.BusinessHours
+		case "ShippingTime":
+			content = strconv.Itoa(currentSite.Contact.ShippingTime)
+		case "ShippingTimeRemark":
+			content = currentSite.Contact.ShippingTimeRemark
 		default:
 			if currentSite.Contact.ExtraFields != nil {
 				for i := range currentSite.Contact.ExtraFields {

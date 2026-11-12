@@ -109,8 +109,8 @@ func (s *StatisticLog) Write(data *Statistic) error {
 		data.CreatedTime = time.Now().Unix()
 	}
 
-	defer s.rwMu.Unlock()
 	s.rwMu.Lock()
+	defer s.rwMu.Unlock()
 	// 添加到缓冲区
 	s.buffer = append(s.buffer, data)
 	return nil

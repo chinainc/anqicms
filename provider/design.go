@@ -427,11 +427,12 @@ func (w *Website) CreateDesignZip(packageName string) (*bytes.Buffer, error) {
 }
 
 func compress(file *os.File, prefix string, zw *zip.Writer) error {
+	// 先登记关闭：Stat 失败也要关闭句柄，否则递归打包时每层都会漏一个 fd
+	defer file.Close()
 	info, err := file.Stat()
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 	if strings.HasPrefix(info.Name(), ".") {
 		return nil
 	}
@@ -456,11 +457,11 @@ func compress(file *os.File, prefix string, zw *zip.Writer) error {
 		}
 	} else {
 		header, err := zip.FileInfoHeader(info)
-		header.Name = prefix + header.Name
-		header.Method = zip.Deflate
 		if err != nil {
 			return err
 		}
+		header.Name = prefix + header.Name
+		header.Method = zip.Deflate
 		writer, err := zw.CreateHeader(header)
 		if err != nil {
 			return err

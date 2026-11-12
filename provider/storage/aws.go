@@ -211,8 +211,9 @@ func (s *AwsS3Storage) Get(ctx context.Context, key string) (io.ReadCloser, erro
 		return nil, err
 	}
 	if resp.StatusCode >= 400 {
-		resp.Body.Close()
+		// 先读响应体再关闭：关闭后 ReadAll 只能读到空内容，错误详情会丢失
 		respBody, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
 		return nil, fmt.Errorf("s3 get failed (status=%d): %s", resp.StatusCode, string(respBody))
 	}
 	return resp.Body, nil
@@ -278,7 +279,7 @@ func (s *AwsS3Storage) Move(ctx context.Context, src, dest string) error {
 	if err != nil {
 		return err
 	}
-	resp.Body.Close()
+	defer resp.Body.Close()
 	if resp.StatusCode >= 400 {
 		respBody, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("s3 copy failed (status=%d): %s", resp.StatusCode, string(respBody))

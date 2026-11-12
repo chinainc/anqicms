@@ -70,8 +70,9 @@ func (s *GoogleStorage) Get(ctx context.Context, key string) (io.ReadCloser, err
 		return nil, err
 	}
 	if resp.StatusCode >= 400 {
-		resp.Body.Close()
+		// 先读响应体再关闭：关闭后 ReadAll 只能读到空内容，错误详情会丢失
 		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
 		return nil, fmt.Errorf("gcs get failed (status=%d): %s", resp.StatusCode, string(body))
 	}
 	return resp.Body, nil
@@ -124,7 +125,7 @@ func (s *GoogleStorage) Move(ctx context.Context, src, dest string) error {
 	if err != nil {
 		return err
 	}
-	resp.Body.Close()
+	defer resp.Body.Close()
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("gcs copy failed (status=%d): %s", resp.StatusCode, string(body))

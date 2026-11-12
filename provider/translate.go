@@ -72,6 +72,11 @@ func (w *Website) SelfAiTranslateResult(req *AnqiTranslateTextRequest) (*AnqiTra
 	return req, nil
 }
 
+// translateHTTPClient 外部翻译接口（百度 / 有道 / DeepL）共用客户端。
+// 原先每处调用要么走 http.DefaultClient、要么临时 new 一个 &http.Client{}：
+// 既没有超时（外部接口挂起会一直占住请求 goroutine），也无法复用连接池。
+var translateHTTPClient = &http.Client{Timeout: 30 * time.Second}
+
 type BaiduTranslate struct {
 	AppId     string
 	AppSecret string
@@ -122,7 +127,7 @@ func (b *BaiduTranslate) Translate(content string, fromLanguage string, toLangua
 	sign := library.Md5(signStr)
 	query.Add("sign", sign)
 	urlString := query.Encode()
-	resp, err := http.Post("https://fanyi-api.baidu.com/api/trans/vip/translate", "application/x-www-form-urlencoded", strings.NewReader(urlString))
+	resp, err := translateHTTPClient.Post("https://fanyi-api.baidu.com/api/trans/vip/translate", "application/x-www-form-urlencoded", strings.NewReader(urlString))
 	if err != nil {
 		return "", err
 	}
@@ -197,7 +202,7 @@ func (yt *YoudaoTranslate) Translate(content string, fromLanguage string, toLang
 	sign := yt.encrypt(signStr)
 	query.Add("sign", sign)
 	urlString := query.Encode()
-	resp, err := http.Post("https://openapi.youdao.com/api", "application/x-www-form-urlencoded", strings.NewReader(urlString))
+	resp, err := translateHTTPClient.Post("https://openapi.youdao.com/api", "application/x-www-form-urlencoded", strings.NewReader(urlString))
 	if err != nil {
 		return "", err
 	}
@@ -238,7 +243,7 @@ type TranslationPayload struct {
 	Text       []string `json:"text"`
 	TargetLang string   `json:"target_lang"`
 	SourceLang string   `json:"source_lang"`
-	GlossaryID string   `json:"glossary_id"`
+	GlossaryID string   `json:"glossary_id,omitempty"`
 }
 
 type TranslationResponse struct {
@@ -287,8 +292,7 @@ func (d *Deepl) Translate(text string, sourceLang, targetLang string, glossaryID
 	req.Header.Set("Authorization", fmt.Sprintf("DeepL-Auth-Key %s", d.apiKey))
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := translateHTTPClient.Do(req)
 
 	if err != nil {
 		return "", "", err
@@ -298,6 +302,20 @@ func (d *Deepl) Translate(text string, sourceLang, targetLang string, glossaryID
 	responseData := TranslationResponse{}
 
 	body, _ := io.ReadAll(resp.Body)
+
+	// DeepL 失败时返回 {"message":"..."}：直接 Unmarshal 会得到空 translations + nil error，
+	// 表现为"翻译成功但内容为空"，配置错误/key 失效时无从排查，这里把真实原因暴露出来。
+	if resp.StatusCode >= 400 {
+		var apiErr struct {
+			Message string `json:"message"`
+		}
+		_ = json.Unmarshal(body, &apiErr)
+		if apiErr.Message != "" {
+			return "", "", fmt.Errorf("deepl 翻译失败 (status=%d): %s", resp.StatusCode, apiErr.Message)
+		}
+		return "", "", fmt.Errorf("deepl 翻译失败 (status=%d): %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
 	err = json.Unmarshal(body, &responseData)
 
 	if err != nil {
@@ -313,6 +331,8 @@ func (d *Deepl) Translate(text string, sourceLang, targetLang string, glossaryID
 	return strings.Join(result, "\n"), sourceLang, nil
 }
 
+// GetGlossaries 取账号下第一个可用（ready）的术语表 ID。
+// 术语表是 DeepL 付费能力：未开通时接口返回 4xx，这里降级为空串（等价于"不使用术语表"），不影响翻译主流程。
 func (d *Deepl) GetGlossaries() (string, error) {
 
 	url := fmt.Sprintf("%s/glossaries", d.baseURL)
@@ -325,8 +345,7 @@ func (d *Deepl) GetGlossaries() (string, error) {
 
 	req.Header.Set("Authorization", fmt.Sprintf("DeepL-Auth-Key %s", d.apiKey))
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := translateHTTPClient.Do(req)
 
 	if err != nil {
 		return "", err
@@ -334,8 +353,31 @@ func (d *Deepl) GetGlossaries() (string, error) {
 
 	defer resp.Body.Close()
 
-	buf := new(bytes.Buffer)
-	return buf.String(), nil
+	if resp.StatusCode >= 400 {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		return "", nil
+	}
+
+	var result struct {
+		Glossaries []struct {
+			GlossaryID string `json:"glossary_id"`
+			Ready      bool   `json:"ready"`
+		} `json:"glossaries"`
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	if err = json.Unmarshal(body, &result); err != nil {
+		// 响应格式异常同样降级，不阻断翻译
+		return "", nil
+	}
+	for _, g := range result.Glossaries {
+		if g.Ready && g.GlossaryID != "" {
+			return g.GlossaryID, nil
+		}
+	}
+	return "", nil
 }
 
 // TranslateHtml 将传入的html中的文字翻译成对应的语言

@@ -50,7 +50,7 @@ if (-not $ver) {
     if ($m) { $ver = $m.Matches[0].Groups[1].Value }
   }
 }
-if (-not $ver) { $ver = '3.6.10' }
+if (-not $ver) { $ver = '3.8.1' }
 if (-not (Test-Path $out)) { New-Item -ItemType Directory -Path $out -Force | Out-Null }
 
 $stage  = Join-Path $env:TEMP ('anqicms-pack-' + $ver)
@@ -168,9 +168,11 @@ if (-not $NoArm64) { New-LinuxTree -Dir $linArm -Arch 'arm64' -BinDir $stageArm 
 
 # ---------------------------------------------------------------- upgrade packages
 Write-Host '== upgrade packages =='
-$note = ('3.6.10：AI 工具路径门闸 Windows 适配（系统目录保护、盘符归一）；修复多处资源句柄未关闭与统计日志读取锁语义（改读锁）；' +
-         '修复模板包重名目录、锚文本替换空指针、站点初始化空指针容错；MCP 意图层域映射补全。3.6.9：新增商家工作台（/business，程序自带静态页面，页面与资源随完整安装包分发）；' +
-         '清理未使用的历史函数与死代码约 2400 行（翻译/推送/标签 SQL/旧 AI 技能等已停用实现），统一结构体 tag 与代码缩进。')
+$note = ('3.8.1：合入上游 AnQiCMS 3.8.0 历史（模型与迁移重构、商品属性迁 archive_products 侧表、前端并入主仓、商城模板），版本号对齐 3.8.x；' +
+         '本地商家工作台 /business、可视化装修、会员中心与后台磁盘版静态服务保持不变。' +
+         '⚠️ 升级后首次启动会执行 3.8.0 迁移：删除 archives / archive_drafts 的 29 个历史列与 4 个冗余索引，不可回滚，升级前请备份数据库。' +
+         '3.6.10：AI 工具路径门闸 Windows 适配；修复资源句柄未关闭、统计日志读取锁语义、模板包重名目录、锚文本替换与站点初始化空指针；MCP 意图层域映射补全。' +
+         '3.6.9：新增商家工作台 /business；清理历史死代码约 2400 行。')
 
 $sqlList = @()
 $vjBase = [ordered]@{
